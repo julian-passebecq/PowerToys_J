@@ -1,4 +1,3 @@
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using JUtilityPalette.Data;
@@ -25,39 +24,40 @@ internal sealed partial class ComposePromptPage : ContentPage
 
 internal sealed partial class ComposePromptForm : FormContent
 {
+    private readonly LibraryStore _store;
     private readonly PromptEntry _prompt;
     private readonly IReadOnlyList<PromptEntry> _instructions;
 
     public ComposePromptForm(LibraryStore store, PromptEntry prompt)
     {
+        _store = store;
         _prompt = prompt;
-        _instructions = store.Prompts.Where(x => x.Kind == "Instruction").OrderBy(x => x.Category).ThenBy(x => x.Title).ToArray();
+        _instructions = store.Prompts
+            .Where(x => x.Kind == "Instruction")
+            .OrderBy(x => x.Category)
+            .ThenBy(x => x.Title)
+            .ToArray();
 
-        StringBuilder toggles = new();
+        List<string> body =
+        [
+            $$"""{ "type": "TextBlock", "text": {{Encode($"Base prompt: {prompt.Title}")}}, "weight": "Bolder", "wrap": true }""",
+            """{ "type": "TextBlock", "text": "Select reusable instructions to append.", "isSubtle": true, "wrap": true }""",
+        ];
+
         foreach (PromptEntry instruction in _instructions)
         {
-            if (toggles.Length > 0)
-            {
-                toggles.Append(',');
-            }
-
-            toggles.Append($$"""
-{ "type": "Input.Toggle", "id": "addon_{{instruction.Id:N}}", "title": {{Encode($"{instruction.Category} · {instruction.Title}")}}, "valueOn": "true", "valueOff": "false" }
-""");
+            body.Add($$"""{ "type": "Input.Toggle", "id": "addon_{{instruction.Id:N}}", "title": {{Encode($"{instruction.Category} · {instruction.Title}")}}, "valueOn": "true", "valueOff": "false" }""");
         }
 
-        string separator = toggles.Length > 0 ? "," : string.Empty;
+        body.Add("""{ "type": "Input.Text", "id": "extra", "label": "One-off addition", "placeholder": "Anything specific for this chat...", "isMultiline": true }""");
+
         TemplateJson = $$"""
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
   "version": "1.5",
   "body": [
-    { "type": "TextBlock", "text": {{Encode($"Base prompt: {prompt.Title}")}}, "weight": "Bolder", "wrap": true },
-    { "type": "TextBlock", "text": "Select reusable instructions to append.", "isSubtle": true, "wrap": true }
-    {{separator}}
-    {{toggles}},
-    { "type": "Input.Text", "id": "extra", "label": "One-off addition", "placeholder": "Anything specific for this chat...", "isMultiline": true }
+    {{string.Join(",\n    ", body)}}
   ],
   "actions": [
     { "type": "Action.Submit", "title": "Copy final prompt" }
@@ -75,12 +75,14 @@ internal sealed partial class ComposePromptForm : FormContent
         }
 
         List<string> blocks = [_prompt.Body.Trim()];
+        int addOnCount = 0;
         foreach (PromptEntry instruction in _instructions)
         {
             string key = $"addon_{instruction.Id:N}";
             if (string.Equals(input[key]?.ToString(), "true", StringComparison.OrdinalIgnoreCase))
             {
                 blocks.Add(instruction.Body.Trim());
+                addOnCount++;
             }
         }
 
@@ -88,9 +90,13 @@ internal sealed partial class ComposePromptForm : FormContent
         if (!string.IsNullOrWhiteSpace(extra))
         {
             blocks.Add(extra);
+            addOnCount++;
         }
 
-        ClipboardText.Set(string.Join("\n\n", blocks.Where(x => !string.IsNullOrWhiteSpace(x))));
+        string finalPrompt = string.Join("\n\n", blocks.Where(x => !string.IsNullOrWhiteSpace(x)));
+        ClipboardText.Set(finalPrompt);
+        string historyTitle = addOnCount == 0 ? _prompt.Title : $"{_prompt.Title} · +{addOnCount}";
+        _store.AddRecentPrompt(historyTitle, finalPrompt, _prompt.Id);
         return CommandResult.ShowToast("Composed prompt copied");
     }
 

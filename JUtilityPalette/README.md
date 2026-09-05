@@ -1,44 +1,64 @@
 # J Utility Palette
 
-A deliberately small PowerToys Command Palette extension for two workflows that are not already solved well by PowerToys:
+A deliberately small PowerToys Command Palette extension for the personal workflows that are not already solved well by PowerToys.
 
-1. **Prompt Library + Composer** — save reusable base prompts and reusable instruction snippets, then compose a final prompt with selected add-ons plus a one-off note and copy it to the clipboard.
-2. **Quick Links** — temporary, categorized links for things you want to revisit without polluting browser bookmarks.
+## What it owns
+
+1. **J Prompts** — reusable base prompts and instruction snippets.
+2. **J Recent Prompts** — a bounded history of the last 25 prompts actually copied/composed.
+3. **J Quick Links** — temporary categorized links that do not deserve permanent browser bookmarks.
+4. **ChatGPT / Codex launchers** — top-level commands that can also be pinned to the Command Palette Dock.
 
 Everything else stays native:
 
-- Clipboard and screenshot history: use Windows `Win+V` or Command Palette's built-in Clipboard History.
-- Crop & Lock, Peek, Image Resizer, PowerRename, Text Extractor, Environment Variables, and Performance Monitor: use the existing PowerToys modules / Command Palette entries.
+- Clipboard and screenshot history: Windows `Win+V` or Command Palette Clipboard History.
+- Crop & Lock, Peek, Image Resizer, PowerRename, Text Extractor, Environment Variables, and Performance Monitor: existing PowerToys modules / Command Palette entries.
 
 This keeps the custom code small and isolated. Command Palette extensions run out-of-process, so a bug here does not require modifying the PowerToys runner or settings application.
 
-## Current scope
-
-### J Prompts
+## J Prompts
 
 - Add a reusable **Prompt** or **Instruction / add-on**.
 - Categorize entries.
-- Enter on a prompt copies it immediately.
-- `Compose + copy` lets you select any saved instructions and add a one-off note before copying the final prompt.
+- Search title, type, category, and body text.
+- Enter on a saved prompt copies it and records it in Recent Prompts.
+- `Compose + copy` lets you select saved instruction blocks and add a one-off note.
+- `Copy + open ChatGPT` and `Copy + open Codex` are available from a prompt's context menu.
 - Edit and delete from the context menu.
-- Local JSON storage under `%LOCALAPPDATA%\JUtilityPalette\library.json`.
 
-Starter entries demonstrate the pattern:
+The composer constructs its Adaptive Card from a list of JSON elements, so it remains valid even when no instruction blocks exist.
 
-- `Debug + improve`
-- `Preserve existing features`
-- `Use current sources`
+## J Recent Prompts
 
-### J Quick Links
+- Keeps only the latest 25 distinct prompt texts.
+- Reusing the same exact prompt moves it back to the top instead of creating duplicates.
+- Search the history.
+- Copy again, copy + open ChatGPT, copy + open Codex, or remove an individual history item.
+
+## J Quick Links
 
 - Add title, category and URL.
+- Search title, category, or URL.
 - Enter opens the URL in the default browser.
 - Copy URL, edit, and delete from the context menu.
-- Starter links for ChatGPT, Codex, and GitHub.
+
+Starter links are included for ChatGPT, Codex, and GitHub.
+
+## Dock
+
+The extension exposes stable ChatGPT and Codex commands as Dock bands. Pin them from Command Palette if you want a permanent two-click AI switch without adding browser-specific automation.
+
+## Storage
+
+All custom data is local JSON:
+
+`%LOCALAPPDATA%\JUtilityPalette\library.json`
+
+No service, database, account, network sync, or background polling is used.
 
 ## Build / run
 
-This project follows the current standalone Command Palette extension template already present in this PowerToys fork.
+This project follows the standalone Command Palette extension template already present in this PowerToys fork and targets the current `Microsoft.CommandPalette.Extensions` 0.11 SDK family.
 
 Requirements:
 
@@ -55,14 +75,10 @@ Select `x64` and build/deploy the `JUtilityPalette` project.
 
 The MSIX manifest currently uses `CN=Julian Passebecq` as the development publisher. For packaging outside local development, use a signing certificate whose subject matches the manifest publisher, or replace the publisher with your Store / signing identity.
 
-## Why this is separate from the PowerToys core
-
-The root repository is a full PowerToys fork. Building a custom runner module would couple a tiny personal workflow to the entire PowerToys build, installer, settings IPC, and module lifecycle. A Command Palette extension is a much smaller failure surface and is the supported extension model.
-
-## Explicitly not in v1
+## Explicitly not in the reliable core
 
 - CPU/GPU monitoring implementation — Command Palette already has Performance Monitor.
-- Power-plan switching — useful later, but `powercfg`/power overlays have device-specific behavior and deserve a separate tiny command set.
-- f.lux replacement — use Windows Night Light or a dedicated display utility; do not mix display gamma code into a prompt manager.
-- News / stocks — browser bookmarks or dedicated widgets are better.
-- Automatic ChatGPT/Codex file attachment — there is no stable public external API/deep link to pre-attach an arbitrary local ZIP/DOC to a new chat. Keep this out of the reliable core.
+- Power-plan switching — useful later, but device/OEM behavior deserves a separate small command set.
+- f.lux replacement — keep display gamma / night-light logic outside a prompt manager.
+- News / stocks — Quick Links or dedicated widgets are a better fit.
+- Automatic ChatGPT/Codex file attachment — there is no stable public external deep-link contract to pre-attach an arbitrary local ZIP/DOC to a new chat, so UI-click automation is intentionally avoided.

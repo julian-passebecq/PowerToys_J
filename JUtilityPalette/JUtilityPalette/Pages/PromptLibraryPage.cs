@@ -8,6 +8,8 @@ namespace JUtilityPalette.Pages;
 
 internal sealed partial class PromptLibraryPage : ListPage
 {
+    private const string ChatGptUrl = "https://chatgpt.com/";
+    private const string CodexUrl = "https://chatgpt.com/codex";
     private readonly LibraryStore _store;
 
     public PromptLibraryPage(LibraryStore store)
@@ -17,6 +19,7 @@ internal sealed partial class PromptLibraryPage : ListPage
         Name = "Open";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         ShowDetails = true;
+        PlaceholderText = "Search prompts, instructions, or categories";
         _store.Changed += (_, _) => RaiseItemsChanged();
     }
 
@@ -31,7 +34,8 @@ internal sealed partial class PromptLibraryPage : ListPage
             },
         ];
 
-        foreach (PromptEntry prompt in _store.Prompts)
+        string query = SearchText?.Trim() ?? string.Empty;
+        foreach (PromptEntry prompt in _store.Prompts.Where(x => Matches(x, query)))
         {
             List<IContextItem> more =
             [
@@ -42,9 +46,13 @@ internal sealed partial class PromptLibraryPage : ListPage
             if (prompt.Kind == "Prompt")
             {
                 more.Insert(0, new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = "Compose + copy" });
+                more.Insert(1, new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
+                more.Insert(2, new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, CodexUrl, "Copy + open Codex")) { Title = "Copy + open Codex" });
             }
 
-            items.Add(new ListItem(new CopyTextCommand(prompt.Body, "Copy", prompt.Kind == "Prompt" ? "Prompt copied" : "Instruction copied"))
+            items.Add(new ListItem(prompt.Kind == "Prompt"
+                ? new CopyPromptCommand(_store, prompt)
+                : new CopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
             {
                 Title = prompt.Title,
                 Subtitle = $"{prompt.Kind} · {prompt.Category}",
@@ -58,5 +66,18 @@ internal sealed partial class PromptLibraryPage : ListPage
         }
 
         return [.. items];
+    }
+
+    private static bool Matches(PromptEntry entry, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return entry.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Kind.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Body.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 }

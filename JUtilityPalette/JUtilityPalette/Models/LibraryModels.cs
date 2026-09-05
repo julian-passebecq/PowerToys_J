@@ -21,10 +21,20 @@ internal sealed class QuickLinkEntry
     public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
 }
 
+internal sealed class RecentPromptEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid SourcePromptId { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Text { get; set; } = string.Empty;
+    public DateTimeOffset CreatedUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
 internal sealed class LibraryState
 {
     public List<PromptEntry> Prompts { get; set; } = [];
     public List<QuickLinkEntry> Links { get; set; } = [];
+    public List<RecentPromptEntry> RecentPrompts { get; set; } = [];
 }
 
 [JsonSerializable(typeof(LibraryState))]

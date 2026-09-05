@@ -8,15 +8,26 @@ internal sealed partial class OpenUrlCommand : InvokableCommand
 {
     private readonly string _url;
 
-    public OpenUrlCommand(string url, string name = "Open")
+    public OpenUrlCommand(string url, string name = "Open", string? id = null)
     {
         _url = url;
         Name = name;
+        if (!string.IsNullOrWhiteSpace(id))
+        {
+            Id = id;
+        }
     }
 
     public override CommandResult Invoke()
     {
-        Process.Start(new ProcessStartInfo(_url) { UseShellExecute = true });
-        return CommandResult.Dismiss();
+        try
+        {
+            Process.Start(new ProcessStartInfo(_url) { UseShellExecute = true });
+            return CommandResult.Dismiss();
+        }
+        catch
+        {
+            return CommandResult.ShowToast("Could not open link");
+        }
     }
 }

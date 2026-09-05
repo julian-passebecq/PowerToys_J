@@ -16,6 +16,7 @@ internal sealed partial class QuickLinksPage : ListPage
         Title = "J Quick Links";
         Name = "Open";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
+        PlaceholderText = "Search quick links or categories";
         _store.Changed += (_, _) => RaiseItemsChanged();
     }
 
@@ -30,7 +31,8 @@ internal sealed partial class QuickLinksPage : ListPage
             },
         ];
 
-        foreach (QuickLinkEntry link in _store.Links)
+        string query = SearchText?.Trim() ?? string.Empty;
+        foreach (QuickLinkEntry link in _store.Links.Where(x => Matches(x, query)))
         {
             items.Add(new ListItem(new OpenUrlCommand(link.Url))
             {
@@ -46,5 +48,17 @@ internal sealed partial class QuickLinksPage : ListPage
         }
 
         return [.. items];
+    }
+
+    private static bool Matches(QuickLinkEntry entry, string query)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return true;
+        }
+
+        return entry.Title.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Category.Contains(query, StringComparison.OrdinalIgnoreCase)
+            || entry.Url.Contains(query, StringComparison.OrdinalIgnoreCase);
     }
 }

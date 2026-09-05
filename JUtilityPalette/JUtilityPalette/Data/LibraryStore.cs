@@ -5,6 +5,7 @@ namespace JUtilityPalette.Data;
 
 internal sealed class LibraryStore
 {
+    private const int MaxRecentPrompts = 25;
     private readonly object _gate = new();
     private readonly string _path;
     private LibraryState _state;
@@ -37,6 +38,17 @@ internal sealed class LibraryStore
             lock (_gate)
             {
                 return _state.Links.OrderBy(x => x.Category).ThenBy(x => x.Title).ToArray();
+            }
+        }
+    }
+
+    public IReadOnlyList<RecentPromptEntry> RecentPrompts
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state.RecentPrompts.OrderByDescending(x => x.CreatedUtc).ToArray();
             }
         }
     }
@@ -131,6 +143,53 @@ internal sealed class LibraryStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public void AddRecentPrompt(string title, string text, Guid sourcePromptId)
+    {
+        string normalized = text.Trim();
+        if (string.IsNullOrWhiteSpace(normalized))
+        {
+            return;
+        }
+
+        lock (_gate)
+        {
+            _state.RecentPrompts.RemoveAll(x => string.Equals(x.Text, normalized, StringComparison.Ordinal));
+            _state.RecentPrompts.Add(new RecentPromptEntry
+            {
+                SourcePromptId = sourcePromptId,
+                Title = Normalize(title, "Prompt"),
+                Text = normalized,
+                CreatedUtc = DateTimeOffset.UtcNow,
+            });
+
+            if (_state.RecentPrompts.Count > MaxRecentPrompts)
+            {
+                foreach (RecentPromptEntry stale in _state.RecentPrompts
+                    .OrderByDescending(x => x.CreatedUtc)
+                    .Skip(MaxRecentPrompts)
+                    .ToArray())
+                {
+                    _state.RecentPrompts.Remove(stale);
+                }
+            }
+
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void DeleteRecentPrompt(Guid id)
+    {
+        lock (_gate)
+        {
+            _state.RecentPrompts.RemoveAll(x => x.Id == id);
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     private LibraryState LoadOrCreate()
     {
         try
@@ -141,6 +200,9 @@ internal sealed class LibraryStore
                 LibraryState? loaded = JsonSerializer.Deserialize(json, LibraryJsonContext.Default.LibraryState);
                 if (loaded is not null)
                 {
+                    loaded.Prompts ??= [];
+                    loaded.Links ??= [];
+                    loaded.RecentPrompts ??= [];
                     return loaded;
                 }
             }

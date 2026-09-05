@@ -27,11 +27,13 @@ internal sealed partial class ComposePromptForm : FormContent
     private readonly LibraryStore _store;
     private readonly PromptEntry _prompt;
     private readonly IReadOnlyList<PromptEntry> _instructions;
+    private readonly IReadOnlyList<string> _variables;
 
     public ComposePromptForm(LibraryStore store, PromptEntry prompt)
     {
         _store = store;
         _prompt = prompt;
+        _variables = PromptTemplate.GetVariables(prompt.Body);
         _instructions = store.Prompts
             .Where(x => x.Kind == "Instruction")
             .OrderByDescending(x => x.IsPinned)
@@ -42,8 +44,14 @@ internal sealed partial class ComposePromptForm : FormContent
         List<string> body =
         [
             $$"""{ "type": "TextBlock", "text": {{Encode($"Base prompt: {prompt.Title}")}}, "weight": "Bolder", "wrap": true }""",
-            """{ "type": "TextBlock", "text": "Select reusable instructions and add anything specific to this run.", "isSubtle": true, "wrap": true }""",
+            """{ "type": "TextBlock", "text": "Fill any template variables, select reusable instructions, and add anything specific to this run.", "isSubtle": true, "wrap": true }""",
         ];
+
+        for (int i = 0; i < _variables.Count; i++)
+        {
+            string variable = _variables[i];
+            body.Add($$"""{ "type": "Input.Text", "id": "variable_{{i}}", "label": {{Encode(variable)}}, "placeholder": {{Encode($"Value for {{{{{variable}}}}}")}} }""");
+        }
 
         foreach (PromptEntry instruction in _instructions)
         {
@@ -78,7 +86,15 @@ internal sealed partial class ComposePromptForm : FormContent
             return CommandResult.GoHome();
         }
 
-        List<string> blocks = [_prompt.Body.Trim()];
+        Dictionary<string, string> values = new(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < _variables.Count; i++)
+        {
+            string value = input[$"variable_{i}"]?.ToString() ?? string.Empty;
+            values[_variables[i]] = value;
+        }
+
+        string basePrompt = PromptTemplate.Fill(_prompt.Body.Trim(), values);
+        List<string> blocks = [basePrompt];
         int addOnCount = 0;
         foreach (PromptEntry instruction in _instructions)
         {
@@ -99,7 +115,9 @@ internal sealed partial class ComposePromptForm : FormContent
 
         string finalPrompt = string.Join("\n\n", blocks.Where(x => !string.IsNullOrWhiteSpace(x)));
         ClipboardText.Set(finalPrompt);
-        string historyTitle = addOnCount == 0 ? _prompt.Title : $"{_prompt.Title} · +{addOnCount}";
+        int filledVariableCount = values.Count(x => !string.IsNullOrWhiteSpace(x.Value));
+        int variationCount = addOnCount + filledVariableCount;
+        string historyTitle = variationCount == 0 ? _prompt.Title : $"{_prompt.Title} · +{variationCount}";
         _store.AddRecentPrompt(historyTitle, finalPrompt, _prompt.Id);
 
         string target = input["target"]?.ToString() ?? "copy";

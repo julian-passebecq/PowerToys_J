@@ -51,7 +51,7 @@ internal sealed partial class PromptLibraryPage : ListPage
 
             if (prompt.Kind == "Prompt")
             {
-                more.Add(new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = "Compose" });
+                more.Add(new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = PromptTemplate.HasVariables(prompt.Body) ? "Compose + fill variables" : "Compose" });
                 more.Add(new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
                 more.Add(new CommandContextItem(new OpenPromptInCodexCommand(_store, prompt)) { Title = "Open in Codex" });
             }
@@ -60,12 +60,13 @@ internal sealed partial class PromptLibraryPage : ListPage
             more.Add(new CommandContextItem(new EditPromptPage(_store, prompt)) { Title = "Edit" });
             more.Add(new CommandContextItem(new DeletePromptCommand(_store, prompt.Id)) { Title = "Delete", IsCritical = true });
 
+            bool isTemplate = prompt.Kind == "Prompt" && PromptTemplate.HasVariables(prompt.Body);
             items.Add(new ListItem(prompt.Kind == "Prompt"
                 ? new CopyPromptCommand(_store, prompt)
                 : new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
             {
                 Title = prompt.IsPinned ? $"★ {prompt.Title}" : prompt.Title,
-                Subtitle = $"{prompt.Kind} · {prompt.Category}",
+                Subtitle = $"{prompt.Kind} · {prompt.Category}{(isTemplate ? " · Template" : string.Empty)}",
                 MoreCommands = [.. more],
                 Details = new Details
                 {

@@ -19,9 +19,18 @@ Everything else stays native: Windows/PowerToys handles clipboard history, scree
 - Search title, type, category, and body text.
 - Enter on a saved prompt copies it and records it in Recent Prompts.
 - Compose a base prompt with selected reusable instructions plus a one-off addition.
+- Optional template variables use `{{name}}` syntax. They create fill-in fields only when a base prompt actually contains variables, so normal prompts stay uncluttered. Empty fields leave the original placeholder unchanged.
 - From the composer, choose **Copy**, **ChatGPT**, or **Codex**.
 - ChatGPT copies the final prompt and opens ChatGPT.
-- Codex uses the documented `codex://new?prompt=...` desktop deep link so the new local Codex chat opens with the prompt prefilled. The prompt is also copied as a fallback.
+- Codex uses the documented `codex://new?prompt=...` desktop deep link so the new local Codex chat opens with the prompt prefilled when protocol activation accepts it. The prompt is always copied as a fallback.
+
+Example template:
+
+```text
+Audit {{project}} for {{focus}}. Preserve existing working features and return {{output format}}.
+```
+
+Variables are intentionally limited to the base prompt in this minimal implementation; reusable instruction blocks remain plain text.
 
 ## J Recent Prompts
 

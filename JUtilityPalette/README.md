@@ -17,7 +17,8 @@ Everything else stays native: Windows/PowerToys handles clipboard history, scree
 - Capture the current text clipboard directly as a Prompt or Instruction.
 - Pin the prompts/instructions you use most; pinned entries sort first.
 - Search title, type, category, and body text.
-- Enter on a saved prompt copies it and records it in Recent Prompts.
+- Enter on a normal prompt copies it and records it in Recent Prompts.
+- Enter on a template prompt opens Compose so unresolved placeholders are not copied by accident; `Copy raw template` remains available from its context menu.
 - Compose a base prompt with selected reusable instructions plus a one-off addition.
 - Optional template variables use `{{name}}` syntax. They create fill-in fields only when a base prompt actually contains variables, so normal prompts stay uncluttered. Empty fields leave the original placeholder unchanged.
 - From the composer, choose **Copy**, **ChatGPT**, or **Codex**.

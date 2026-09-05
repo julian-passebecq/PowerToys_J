@@ -47,23 +47,35 @@ internal sealed partial class PromptLibraryPage : ListPage
         string query = SearchText?.Trim() ?? string.Empty;
         foreach (PromptEntry prompt in _store.Prompts.Where(x => Matches(x, query)))
         {
+            bool isTemplate = prompt.Kind == "Prompt" && PromptTemplate.HasVariables(prompt.Body);
             List<IContextItem> more = [];
+            ICommand primaryCommand;
 
             if (prompt.Kind == "Prompt")
             {
-                more.Add(new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = PromptTemplate.HasVariables(prompt.Body) ? "Compose + fill variables" : "Compose" });
-                more.Add(new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
-                more.Add(new CommandContextItem(new OpenPromptInCodexCommand(_store, prompt)) { Title = "Open in Codex" });
+                if (isTemplate)
+                {
+                    primaryCommand = new ComposePromptPage(_store, prompt);
+                    more.Add(new CommandContextItem(new CopyPromptCommand(_store, prompt)) { Title = "Copy raw template" });
+                }
+                else
+                {
+                    primaryCommand = new CopyPromptCommand(_store, prompt);
+                    more.Add(new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = "Compose" });
+                    more.Add(new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
+                    more.Add(new CommandContextItem(new OpenPromptInCodexCommand(_store, prompt)) { Title = "Open in Codex" });
+                }
+            }
+            else
+            {
+                primaryCommand = new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied");
             }
 
             more.Add(new CommandContextItem(new TogglePromptPinCommand(_store, prompt)) { Title = prompt.IsPinned ? "Unpin" : "Pin" });
             more.Add(new CommandContextItem(new EditPromptPage(_store, prompt)) { Title = "Edit" });
             more.Add(new CommandContextItem(new DeletePromptCommand(_store, prompt.Id)) { Title = "Delete", IsCritical = true });
 
-            bool isTemplate = prompt.Kind == "Prompt" && PromptTemplate.HasVariables(prompt.Body);
-            items.Add(new ListItem(prompt.Kind == "Prompt"
-                ? new CopyPromptCommand(_store, prompt)
-                : new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
+            items.Add(new ListItem(primaryCommand)
             {
                 Title = prompt.IsPinned ? $"★ {prompt.Title}" : prompt.Title,
                 Subtitle = $"{prompt.Kind} · {prompt.Category}{(isTemplate ? " · Template" : string.Empty)}",

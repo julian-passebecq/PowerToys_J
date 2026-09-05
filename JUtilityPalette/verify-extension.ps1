@@ -30,8 +30,8 @@ $ns.AddNamespace("uap3", "http://schemas.microsoft.com/appx/manifest/uap/windows
 $identity = $manifest.SelectSingleNode("/f:Package/f:Identity", $ns)
 $comClass = $manifest.SelectSingleNode("//com:Class", $ns)
 $appExtension = $manifest.SelectSingleNode("//uap3:AppExtension", $ns)
-$createInstance = $manifest.SelectSingleNode("//uap3:AppExtension/uap3:Properties/CmdPalProvider/Activation/CreateInstance", $ns)
-$commands = $manifest.SelectSingleNode("//uap3:AppExtension/uap3:Properties/CmdPalProvider/SupportedInterfaces/Commands", $ns)
+$createInstance = $manifest.SelectSingleNode("//uap3:AppExtension/uap3:Properties/f:CmdPalProvider/f:Activation/f:CreateInstance", $ns)
+$commands = $manifest.SelectSingleNode("//uap3:AppExtension/uap3:Properties/f:CmdPalProvider/f:SupportedInterfaces/f:Commands", $ns)
 
 Require ($null -ne $identity) "Package Identity is missing from Package.appxmanifest."
 Require (-not [string]::IsNullOrWhiteSpace($identity.Name)) "Package Identity Name is empty."

@@ -8,28 +8,28 @@ A deliberately small PowerToys Command Palette extension for the personal workfl
 2. **J Recent Prompts** — a bounded history of the last 25 prompts actually used.
 3. **J Quick Links** — temporary categorized links that do not deserve permanent browser bookmarks.
 4. **ChatGPT / Codex launchers** — top-level commands and quick actions.
-5. **Fast root recall** — type `j ` followed by prompt keywords directly on the Command Palette landing page.
+5. **Fast root recall** — retrieve and route prompts directly from the Command Palette landing page.
 
 Everything else stays native: Windows/PowerToys handles clipboard history, screenshots, Crop & Lock, Peek, Image Resizer, PowerRename, Text Extractor, Environment Variables, and Performance Monitor.
 
 ## Fast root recall
 
-Press `Win+Alt+Space` and type `j ` plus a few keywords, for example:
+Press `Win+Alt+Space` and use one of three tiny prefixes:
 
 ```text
-j debug
-j preserve features
-j current sources
+j debug               # find + copy
+jg debug              # find + copy + open ChatGPT
+jc debug              # find + open Codex with prompt prefilled
 ```
 
-Up to the three best matching saved prompts/instructions appear directly on the landing page. The fallback stays completely hidden for normal Command Palette searches, so it does not add noise to other workflows.
+You can use multiple keywords, for example `j preserve features` or `jc current sources`. Up to the three best matching entries appear directly on the landing page. These fallback results stay completely hidden for ordinary Command Palette searches, so they do not add noise to files, apps, settings, calculator, or other extensions.
 
-- Normal prompt: Enter copies it and records it in Recent Prompts.
-- Template prompt: Enter opens Compose so variables can be filled first.
-- Instruction: Enter copies the instruction.
+- `j ` searches Prompts and Instructions. Prompts copy; Instructions copy.
+- `jg ` and `jc ` search full Prompts only, because reusable Instructions are normally add-ons rather than standalone requests.
+- Template prompt: all three prefixes open Compose first so unresolved `{{variables}}` cannot be routed accidentally.
 - Ranking checks title first, then category/body; pinned entries get a small preference.
 
-For the smallest possible launcher, enable **Open with a compact search box** in Command Palette settings. Then the common flow is simply `Win+Alt+Space` → `j debug` → Enter; the palette expands only when a nested page such as Compose needs more room.
+For the smallest possible launcher, enable **Open with a compact search box** in Command Palette settings. Then the common flow is `Win+Alt+Space` → `jg debug` → Enter; the palette expands only when a nested page such as Compose needs more room.
 
 ## J Prompts
 
@@ -96,7 +96,7 @@ Requirements:
 - Visual Studio with Windows application development tooling
 - .NET 10 SDK
 
-The project includes the packaged launch profile and x64/ARM64 publish profiles from the official standalone Command Palette extension template.
+The project includes the packaged launch profile and x64/ARM64 publish profiles from the official standalone Command Palette extension template. `JUtilityPalette.csproj` binds `PublishProfile` to `win-$(Platform).pubxml` so Visual Studio selects the correct profile for the active architecture.
 
 For local use:
 

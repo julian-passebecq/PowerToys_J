@@ -7,17 +7,27 @@ using JCopyTextCommand = JUtilityPalette.Commands.CopyTextCommand;
 
 namespace JUtilityPalette.Commands;
 
+internal enum PromptFallbackAction
+{
+    Copy,
+    ChatGpt,
+    Codex,
+}
+
 internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
 {
-    private const string Prefix = "j ";
     private readonly LibraryStore _store;
     private readonly int _rank;
+    private readonly string _prefix;
+    private readonly PromptFallbackAction _action;
 
-    public PromptFallbackCommandItem(LibraryStore store, int rank)
-        : base("J Prompts", $"com.julian.jutilitypalette.prompt-fallback.{rank}")
+    public PromptFallbackCommandItem(LibraryStore store, int rank, string prefix, PromptFallbackAction action)
+        : base(GetDisplayName(action), $"com.julian.jutilitypalette.prompt-fallback.{action.ToString().ToLowerInvariant()}.{rank}")
     {
         _store = store;
         _rank = rank;
+        _prefix = prefix;
+        _action = action;
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         Hide();
     }
@@ -25,13 +35,13 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
     public override void UpdateQuery(string query)
     {
         string normalized = query.TrimStart();
-        if (!normalized.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+        if (!normalized.StartsWith(_prefix, StringComparison.OrdinalIgnoreCase))
         {
             Hide();
             return;
         }
 
-        string search = normalized[Prefix.Length..].Trim();
+        string search = normalized[_prefix.Length..].Trim();
         if (search.Length == 0)
         {
             Hide();
@@ -39,6 +49,7 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
         }
 
         var match = _store.Prompts
+            .Where(ShouldInclude)
             .Select(prompt => new { Prompt = prompt, Score = Score(prompt, search) })
             .Where(x => x.Score > 0)
             .OrderByDescending(x => x.Score)
@@ -56,17 +67,27 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
         Apply(match.Prompt);
     }
 
+    private bool ShouldInclude(PromptEntry prompt) =>
+        _action == PromptFallbackAction.Copy || prompt.Kind == "Prompt";
+
     private void Apply(PromptEntry prompt)
     {
-        bool isTemplate = prompt.Kind == "Prompt" && PromptTemplate.HasVariables(prompt.Body);
-        Command = prompt.Kind == "Prompt"
-            ? isTemplate
-                ? new ComposePromptPage(_store, prompt)
-                : new CopyPromptCommand(_store, prompt)
-            : new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied");
+        bool isPrompt = prompt.Kind == "Prompt";
+        bool isTemplate = isPrompt && PromptTemplate.HasVariables(prompt.Body);
+
+        Command = isTemplate
+            ? new ComposePromptPage(_store, prompt)
+            : !isPrompt
+                ? new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied")
+                : _action switch
+                {
+                    PromptFallbackAction.ChatGpt => new CopyPromptAndOpenCommand(_store, prompt, AppLauncher.ChatGptUrl, "Copy + open ChatGPT"),
+                    PromptFallbackAction.Codex => new OpenPromptInCodexCommand(_store, prompt),
+                    _ => new CopyPromptCommand(_store, prompt),
+                };
 
         Title = prompt.IsPinned ? $"★ {prompt.Title}" : prompt.Title;
-        Subtitle = $"J · {prompt.Kind} · {prompt.Category}{(isTemplate ? " · fill template" : string.Empty)}";
+        Subtitle = $"{GetActionLabel(_action)} · {prompt.Kind} · {prompt.Category}{(isTemplate ? " · fill template" : string.Empty)}";
     }
 
     private void Hide()
@@ -74,6 +95,20 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
         Title = string.Empty;
         Subtitle = string.Empty;
     }
+
+    private static string GetDisplayName(PromptFallbackAction action) => action switch
+    {
+        PromptFallbackAction.ChatGpt => "J → ChatGPT",
+        PromptFallbackAction.Codex => "J → Codex",
+        _ => "J Prompts",
+    };
+
+    private static string GetActionLabel(PromptFallbackAction action) => action switch
+    {
+        PromptFallbackAction.ChatGpt => "J ChatGPT",
+        PromptFallbackAction.Codex => "J Codex",
+        _ => "J",
+    };
 
     private static int Score(PromptEntry prompt, string query)
     {

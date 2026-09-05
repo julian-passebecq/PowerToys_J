@@ -48,7 +48,7 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
         var codexLauncher = new JOpenUrlCommand(AppLauncher.CodexNewChatUri, "Open Codex", CodexCommandId);
         _codexCommand = new CommandItem(codexLauncher)
         {
-            Title = "Codex Desktop",
+            Title = "Codex",
             Subtitle = "Open a new local Codex chat",
         };
 
@@ -80,9 +80,15 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
 
         _fallbackCommands =
         [
-            new PromptFallbackCommandItem(_store, 0),
-            new PromptFallbackCommandItem(_store, 1),
-            new PromptFallbackCommandItem(_store, 2),
+            new PromptFallbackCommandItem(_store, 0, "j ", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 1, "j ", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 2, "j ", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 0, "jg ", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 1, "jg ", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 2, "jg ", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 0, "jc ", PromptFallbackAction.Codex),
+            new PromptFallbackCommandItem(_store, 1, "jc ", PromptFallbackAction.Codex),
+            new PromptFallbackCommandItem(_store, 2, "jc ", PromptFallbackAction.Codex),
         ];
     }
 

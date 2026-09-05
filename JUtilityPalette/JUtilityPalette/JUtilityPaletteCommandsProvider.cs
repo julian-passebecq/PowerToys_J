@@ -4,6 +4,7 @@ using JUtilityPalette.Pages;
 using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using JOpenUrlCommand = JUtilityPalette.Commands.OpenUrlCommand;
 
 namespace JUtilityPalette;
 
@@ -23,12 +24,12 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
         DisplayName = "J Utility Palette";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
 
-        _chatGptCommand = new CommandItem(new OpenUrlCommand(AppLauncher.ChatGptUrl, "Open ChatGPT", ChatGptCommandId))
+        _chatGptCommand = new CommandItem(new JOpenUrlCommand(AppLauncher.ChatGptUrl, "Open ChatGPT", ChatGptCommandId))
         {
             Title = "ChatGPT",
             Subtitle = "Open ChatGPT",
         };
-        _codexCommand = new CommandItem(new OpenUrlCommand(AppLauncher.CodexNewChatUri, "Open Codex", CodexCommandId))
+        _codexCommand = new CommandItem(new JOpenUrlCommand(AppLauncher.CodexNewChatUri, "Open Codex", CodexCommandId))
         {
             Title = "Codex Desktop",
             Subtitle = "Open a new local Codex chat",

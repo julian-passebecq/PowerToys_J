@@ -4,6 +4,7 @@ using JUtilityPalette.Models;
 using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using JCopyTextCommand = JUtilityPalette.Commands.CopyTextCommand;
 
 namespace JUtilityPalette.Pages;
 
@@ -61,7 +62,7 @@ internal sealed partial class PromptLibraryPage : ListPage
 
             items.Add(new ListItem(prompt.Kind == "Prompt"
                 ? new CopyPromptCommand(_store, prompt)
-                : new CopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
+                : new JCopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
             {
                 Title = prompt.IsPinned ? $"★ {prompt.Title}" : prompt.Title,
                 Subtitle = $"{prompt.Kind} · {prompt.Category}",

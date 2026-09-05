@@ -1,9 +1,11 @@
+using System.Globalization;
 using JUtilityPalette.Commands;
 using JUtilityPalette.Data;
 using JUtilityPalette.Models;
 using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using JCopyTextCommand = JUtilityPalette.Commands.CopyTextCommand;
 
 namespace JUtilityPalette.Pages;
 
@@ -29,10 +31,10 @@ internal sealed partial class RecentPromptsPage : ListPage
 
         foreach (RecentPromptEntry recent in _store.RecentPrompts.Where(x => Matches(x, query)))
         {
-            items.Add(new ListItem(new CopyTextCommand(recent.Text, "Copy", "Recent prompt copied"))
+            items.Add(new ListItem(new JCopyTextCommand(recent.Text, "Copy", "Recent prompt copied"))
             {
                 Title = recent.Title,
-                Subtitle = recent.CreatedUtc.LocalDateTime.ToString("g"),
+                Subtitle = recent.CreatedUtc.LocalDateTime.ToString("g", CultureInfo.CurrentCulture),
                 MoreCommands =
                 [
                     new CommandContextItem(new CopyTextAndOpenCommand(recent.Text, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" },

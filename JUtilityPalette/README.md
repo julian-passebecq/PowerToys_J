@@ -29,6 +29,8 @@ Up to the three best matching saved prompts/instructions appear directly on the 
 - Instruction: Enter copies the instruction.
 - Ranking checks title first, then category/body; pinned entries get a small preference.
 
+For the smallest possible launcher, enable **Open with a compact search box** in Command Palette settings. Then the common flow is simply `Win+Alt+Space` → `j debug` → Enter; the palette expands only when a nested page such as Compose needs more room.
+
 ## J Prompts
 
 - Add a reusable **Prompt** or **Instruction / add-on**.
@@ -41,7 +43,7 @@ Up to the three best matching saved prompts/instructions appear directly on the 
 - Optional template variables use `{{name}}` syntax. They create fill-in fields only when a base prompt actually contains variables, so normal prompts stay uncluttered. Empty fields leave the original placeholder unchanged.
 - From the composer, choose **Copy**, **ChatGPT**, or **Codex**.
 - ChatGPT copies the final prompt and opens ChatGPT.
-- Codex uses the documented `codex://new?prompt=...` desktop deep link so the new local Codex chat opens with the prompt prefilled when protocol activation accepts it. The prompt is always copied as a fallback.
+- Codex uses the canonical `codex://new?prompt=...` desktop deep link so a new local Codex chat opens with the prompt prefilled when Windows protocol activation succeeds. The prompt is always copied first because Codex protocol activation has had Windows-specific regressions.
 
 Example template:
 
@@ -65,7 +67,7 @@ Variables are intentionally limited to the base prompt in this minimal implement
 - Enter opens the URL in the default handler.
 - Copy URL, edit, and delete from the context menu.
 
-New installs seed ChatGPT, Codex Desktop (`codex://threads/new`), and GitHub.
+New installs seed ChatGPT, Codex (`codex://threads/new`), and GitHub.
 
 ## Storage and recovery
 
@@ -94,7 +96,7 @@ Requirements:
 - Visual Studio with Windows application development tooling
 - .NET 10 SDK
 
-The project now includes the packaged launch profile and x64/ARM64 publish profiles from the official standalone Command Palette extension template.
+The project includes the packaged launch profile and x64/ARM64 publish profiles from the official standalone Command Palette extension template.
 
 For local use:
 
@@ -106,6 +108,8 @@ For local use:
 Do not use the `JUtilityPalette (Unpackaged)` profile for Command Palette discovery; the extension relies on package registration through its app manifest.
 
 A focused `build.ps1` and Windows GitHub Actions workflow are included so this small extension can be compile-checked without building the full PowerToys fork.
+
+`verify-extension.ps1` adds a second guardrail before compilation. It verifies that the extension's C# `[Guid]`, COM class registration and Command Palette `CreateInstance` CLSID are identical, checks the `com.microsoft.commandpalette` registration and Commands interface, and confirms that packaged x64/ARM64 deployment profiles still exist. This catches the common "builds successfully but never appears in Command Palette" class of mistakes.
 
 The MSIX manifest currently uses `CN=Julian Passebecq` as the development publisher. For packaging outside local development, use a signing certificate whose subject matches the manifest publisher, or replace the publisher with your Store / signing identity.
 

@@ -25,6 +25,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Verify extension registration
+        shell: pwsh
+        run: .\JUtilityPalette\verify-extension.ps1
+
       - name: Toolchain
         shell: pwsh
         run: |

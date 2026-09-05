@@ -1,0 +1,36 @@
+name: J Utility Palette CI
+
+on:
+  push:
+    branches:
+      - feature/j-utility-palette-minimal
+    paths:
+      - "JUtilityPalette/**"
+      - ".github/workflows/jutilitypalette-ci.yml"
+  pull_request:
+    paths:
+      - "JUtilityPalette/**"
+      - ".github/workflows/jutilitypalette-ci.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-x64:
+    runs-on: windows-2025
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Toolchain
+        shell: pwsh
+        run: |
+          dotnet --info
+          & "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -property installationVersion
+
+      - name: Build J Utility Palette
+        shell: pwsh
+        run: .\JUtilityPalette\build.ps1 -Configuration Release -Platform x64

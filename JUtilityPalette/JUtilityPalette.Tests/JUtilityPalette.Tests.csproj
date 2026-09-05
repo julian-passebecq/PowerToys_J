@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <Platforms>x64</Platforms>
+    <PlatformTarget>x64</PlatformTarget>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\JUtilityPalette\Models\LibraryModels.cs" Link="Source\LibraryModels.cs" />
+    <Compile Include="..\JUtilityPalette\Data\LibraryStore.cs" Link="Source\LibraryStore.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\PromptTemplate.cs" Link="Source\PromptTemplate.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\PromptMatcher.cs" Link="Source\PromptMatcher.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\PowerToysBridge.cs" Link="Source\PowerToysBridge.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\SystemShortcutCatalog.cs" Link="Source\SystemShortcutCatalog.cs" />
+  </ItemGroup>
+</Project>

@@ -38,3 +38,7 @@ jobs:
       - name: Build J Utility Palette
         shell: pwsh
         run: .\JUtilityPalette\build.ps1 -Configuration Release -Platform x64
+
+      - name: Run logic smoke tests
+        shell: pwsh
+        run: dotnet run --project .\JUtilityPalette\JUtilityPalette.Tests\JUtilityPalette.Tests.csproj --configuration Release

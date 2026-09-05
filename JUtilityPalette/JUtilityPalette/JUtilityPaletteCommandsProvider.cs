@@ -11,6 +11,7 @@ namespace JUtilityPalette;
 public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
 {
     private const string PromptsCommandId = "com.julian.jutilitypalette.prompts";
+    private const string SystemCommandId = "com.julian.jutilitypalette.system";
     private const string ChatGptCommandId = "com.julian.jutilitypalette.open-chatgpt";
     private const string CodexCommandId = "com.julian.jutilitypalette.open-codex";
 
@@ -18,6 +19,7 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
     private readonly ICommandItem[] _commands;
     private readonly IFallbackCommandItem[] _fallbackCommands;
     private readonly ICommandItem _promptLibraryCommand;
+    private readonly ICommandItem _systemCommand;
     private readonly ICommandItem _chatGptCommand;
     private readonly ICommandItem _codexCommand;
     private readonly ICommandItem _workflowDockBand;
@@ -36,6 +38,16 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
         {
             Title = "J Prompts",
             Subtitle = "Reusable prompts + composable instructions",
+        };
+
+        var systemShortcutsPage = new SystemShortcutsPage
+        {
+            Id = SystemCommandId,
+        };
+        _systemCommand = new CommandItem(systemShortcutsPage)
+        {
+            Title = "J System",
+            Subtitle = "Hosts, environment variables, and Task Manager",
         };
 
         var chatGptLauncher = new JOpenUrlCommand(AppLauncher.ChatGptUrl, "Open ChatGPT", ChatGptCommandId);
@@ -74,6 +86,7 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
                 Title = "J Quick Links",
                 Subtitle = "Temporary categorized links",
             },
+            _systemCommand,
             _chatGptCommand,
             _codexCommand,
         ];
@@ -89,6 +102,9 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
             new PromptFallbackCommandItem(_store, 0, "jc ", PromptFallbackAction.Codex),
             new PromptFallbackCommandItem(_store, 1, "jc ", PromptFallbackAction.Codex),
             new PromptFallbackCommandItem(_store, 2, "jc ", PromptFallbackAction.Codex),
+            new SystemShortcutFallbackCommandItem(0),
+            new SystemShortcutFallbackCommandItem(1),
+            new SystemShortcutFallbackCommandItem(2),
         ];
     }
 
@@ -101,6 +117,7 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
     public override ICommandItem? GetCommandItem(string id) => id switch
     {
         PromptsCommandId => _promptLibraryCommand,
+        SystemCommandId => _systemCommand,
         ChatGptCommandId => _chatGptCommand,
         CodexCommandId => _codexCommand,
         _ => null,

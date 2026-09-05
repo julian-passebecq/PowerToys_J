@@ -15,8 +15,17 @@ internal sealed class LibraryStore
     public event EventHandler? Changed;
 
     public LibraryStore()
+        : this(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JUtilityPalette"))
     {
-        string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JUtilityPalette");
+    }
+
+    internal LibraryStore(string directory)
+    {
+        if (string.IsNullOrWhiteSpace(directory))
+        {
+            throw new ArgumentException("A storage directory is required.", nameof(directory));
+        }
+
         Directory.CreateDirectory(directory);
         _path = Path.Combine(directory, "library.json");
         _backupPath = Path.Combine(directory, "library.backup.json");

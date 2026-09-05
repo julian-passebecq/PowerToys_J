@@ -48,13 +48,8 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
             return;
         }
 
-        var match = _store.Prompts
-            .Where(ShouldInclude)
-            .Select(prompt => new { Prompt = prompt, Score = Score(prompt, search) })
-            .Where(x => x.Score > 0)
-            .OrderByDescending(x => x.Score)
-            .ThenByDescending(x => x.Prompt.IsPinned)
-            .ThenBy(x => x.Prompt.Title, StringComparer.OrdinalIgnoreCase)
+        PromptEntry? match = PromptMatcher
+            .Rank(_store.Prompts, search, _action != PromptFallbackAction.Copy)
             .Skip(_rank)
             .FirstOrDefault();
 
@@ -64,15 +59,12 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
             return;
         }
 
-        Apply(match.Prompt);
+        Apply(match);
     }
-
-    private bool ShouldInclude(PromptEntry prompt) =>
-        _action == PromptFallbackAction.Copy || prompt.Kind == "Prompt";
 
     private void Apply(PromptEntry prompt)
     {
-        bool isPrompt = prompt.Kind == "Prompt";
+        bool isPrompt = string.Equals(prompt.Kind, "Prompt", StringComparison.OrdinalIgnoreCase);
         bool isTemplate = isPrompt && PromptTemplate.HasVariables(prompt.Body);
 
         Command = isTemplate
@@ -109,59 +101,4 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
         PromptFallbackAction.Codex => "J Codex",
         _ => "J",
     };
-
-    private static int Score(PromptEntry prompt, string query)
-    {
-        string[] terms = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        if (terms.Length == 0)
-        {
-            return 0;
-        }
-
-        int score = 0;
-        foreach (string term in terms)
-        {
-            if (prompt.Title.StartsWith(term, StringComparison.OrdinalIgnoreCase))
-            {
-                score += 100;
-            }
-            else if (prompt.Title.Contains(term, StringComparison.OrdinalIgnoreCase))
-            {
-                score += 75;
-            }
-            else if (prompt.Category.Contains(term, StringComparison.OrdinalIgnoreCase))
-            {
-                score += 40;
-            }
-            else if (prompt.Body.Contains(term, StringComparison.OrdinalIgnoreCase))
-            {
-                score += 15;
-            }
-            else
-            {
-                return 0;
-            }
-        }
-
-        if (string.Equals(prompt.Title, query, StringComparison.OrdinalIgnoreCase))
-        {
-            score += 300;
-        }
-        else if (prompt.Title.StartsWith(query, StringComparison.OrdinalIgnoreCase))
-        {
-            score += 150;
-        }
-
-        if (prompt.IsPinned)
-        {
-            score += 25;
-        }
-
-        if (prompt.Kind == "Prompt")
-        {
-            score += 5;
-        }
-
-        return score;
-    }
 }

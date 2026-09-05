@@ -61,7 +61,7 @@ $outputType = @($project.Project.PropertyGroup.OutputType) | Where-Object { $_ -
 $publishProfile = @($project.Project.PropertyGroup.PublishProfile) | Where-Object { $_ -ne $null } | Select-Object -First 1
 Require ([string]$enableMsix -eq "true") "EnableMsixTooling must be true in JUtilityPalette.csproj."
 Require ([string]$outputType -eq "WinExe") "OutputType must remain WinExe for the packaged COM server."
-Require ([string]$publishProfile -eq 'win-$(Platform).pubxml') "PublishProfile must remain bound to win-$(Platform).pubxml."
+Require ([string]$publishProfile -eq 'win-$(Platform).pubxml') 'PublishProfile must remain bound to win-$(Platform).pubxml.'
 
 $launchSettings = Get-Content $launchSettingsPath -Raw | ConvertFrom-Json
 $packageProfile = $launchSettings.profiles.PSObject.Properties | Where-Object { $_.Value.commandName -eq "MsixPackage" } | Select-Object -First 1

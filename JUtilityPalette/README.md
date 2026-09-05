@@ -7,9 +7,27 @@ A deliberately small PowerToys Command Palette extension for the personal workfl
 1. **J Prompts** — reusable base prompts and instruction snippets.
 2. **J Recent Prompts** — a bounded history of the last 25 prompts actually used.
 3. **J Quick Links** — temporary categorized links that do not deserve permanent browser bookmarks.
-4. **ChatGPT / Codex launchers** — top-level commands that can also be pinned to the Command Palette Dock.
+4. **ChatGPT / Codex launchers** — top-level commands and quick actions.
+5. **Fast root recall** — type `j ` followed by prompt keywords directly on the Command Palette landing page.
 
 Everything else stays native: Windows/PowerToys handles clipboard history, screenshots, Crop & Lock, Peek, Image Resizer, PowerRename, Text Extractor, Environment Variables, and Performance Monitor.
+
+## Fast root recall
+
+Press `Win+Alt+Space` and type `j ` plus a few keywords, for example:
+
+```text
+j debug
+j preserve features
+j current sources
+```
+
+Up to the three best matching saved prompts/instructions appear directly on the landing page. The fallback stays completely hidden for normal Command Palette searches, so it does not add noise to other workflows.
+
+- Normal prompt: Enter copies it and records it in Recent Prompts.
+- Template prompt: Enter opens Compose so variables can be filled first.
+- Instruction: Enter copies the instruction.
+- Ranking checks title first, then category/body; pinned entries get a small preference.
 
 ## J Prompts
 
@@ -63,20 +81,31 @@ If the primary JSON cannot be parsed on startup, the extension attempts to recov
 
 ## Dock
 
-The extension exposes stable ChatGPT and Codex Desktop commands as Dock bands. Command Palette Dock support is native; no custom always-on-top window is created.
+The extension exposes one optional **J Workflow** Dock band containing three buttons: **Prompts**, **ChatGPT**, and **Codex**. This uses Command Palette's native multi-button Dock support; no custom always-on-top window is created. The individual top-level commands keep stable IDs and can still be pinned separately if preferred.
 
-## Build / run
+## Build / deploy
 
 The project follows the standalone Command Palette extension model and targets the current `Microsoft.CommandPalette.Extensions` 0.11 SDK family.
 
 Requirements:
 
-- Windows 10 19041+ / Windows 11
 - Current PowerToys with Command Palette enabled
+- Windows Developer Mode enabled for local extension deployment
 - Visual Studio with Windows application development tooling
 - .NET 10 SDK
 
-Open `JUtilityPalette\JUtilityPalette.sln`, select `x64`, and build/deploy the `JUtilityPalette` project. A focused `build.ps1` and Windows GitHub Actions workflow are included so this small extension can be compiled without building the full PowerToys fork.
+The project now includes the packaged launch profile and x64/ARM64 publish profiles from the official standalone Command Palette extension template.
+
+For local use:
+
+1. Open `JUtilityPalette\JUtilityPalette.sln` in Visual Studio.
+2. Select `x64` and the packaged **JUtilityPalette (Package)** profile.
+3. Use **Build > Deploy JUtilityPalette**. Building alone is not enough to refresh an installed extension package.
+4. Open Command Palette and run **Reload Command Palette Extension** after redeploying changes.
+
+Do not use the `JUtilityPalette (Unpackaged)` profile for Command Palette discovery; the extension relies on package registration through its app manifest.
+
+A focused `build.ps1` and Windows GitHub Actions workflow are included so this small extension can be compile-checked without building the full PowerToys fork.
 
 The MSIX manifest currently uses `CN=Julian Passebecq` as the development publisher. For packaging outside local development, use a signing certificate whose subject matches the manifest publisher, or replace the publisher with your Store / signing identity.
 

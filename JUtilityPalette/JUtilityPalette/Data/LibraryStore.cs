@@ -5,9 +5,11 @@ namespace JUtilityPalette.Data;
 
 internal sealed class LibraryStore
 {
+    private const int CurrentSchemaVersion = 1;
     private const int MaxRecentPrompts = 25;
     private readonly object _gate = new();
     private readonly string _path;
+    private readonly string _backupPath;
     private LibraryState _state;
 
     public event EventHandler? Changed;
@@ -17,6 +19,7 @@ internal sealed class LibraryStore
         string directory = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "JUtilityPalette");
         Directory.CreateDirectory(directory);
         _path = Path.Combine(directory, "library.json");
+        _backupPath = Path.Combine(directory, "library.backup.json");
         _state = LoadOrCreate();
     }
 
@@ -26,7 +29,10 @@ internal sealed class LibraryStore
         {
             lock (_gate)
             {
-                return _state.Prompts.OrderByDescending(x => x.UpdatedUtc).ToArray();
+                return _state.Prompts
+                    .OrderByDescending(x => x.IsPinned)
+                    .ThenByDescending(x => x.UpdatedUtc)
+                    .ToArray();
             }
         }
     }
@@ -79,6 +85,24 @@ internal sealed class LibraryStore
                 existing.UpdatedUtc = DateTimeOffset.UtcNow;
             }
 
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void TogglePromptPinned(Guid id)
+    {
+        lock (_gate)
+        {
+            PromptEntry? prompt = _state.Prompts.FirstOrDefault(x => x.Id == id);
+            if (prompt is null)
+            {
+                return;
+            }
+
+            prompt.IsPinned = !prompt.IsPinned;
+            prompt.UpdatedUtc = DateTimeOffset.UtcNow;
             SaveUnsafe();
         }
 
@@ -192,36 +216,87 @@ internal sealed class LibraryStore
 
     private LibraryState LoadOrCreate()
     {
-        try
+        if (TryLoad(_path, out LibraryState? loaded))
         {
-            if (File.Exists(_path))
-            {
-                string json = File.ReadAllText(_path);
-                LibraryState? loaded = JsonSerializer.Deserialize(json, LibraryJsonContext.Default.LibraryState);
-                if (loaded is not null)
-                {
-                    loaded.Prompts ??= [];
-                    loaded.Links ??= [];
-                    loaded.RecentPrompts ??= [];
-                    return loaded;
-                }
-            }
+            return NormalizeLoadedState(loaded!);
         }
-        catch
+
+        if (TryLoad(_backupPath, out LibraryState? backup))
         {
+            LibraryState recovered = NormalizeLoadedState(backup!);
+            try
+            {
+                File.Copy(_backupPath, _path, true);
+            }
+            catch
+            {
+            }
+
+            return recovered;
         }
 
         LibraryState seeded = CreateSeedState();
-        _state = seeded;
-        SaveUnsafe();
+        string json = JsonSerializer.Serialize(seeded, LibraryJsonContext.Default.LibraryState);
+        File.WriteAllText(_path, json);
         return seeded;
+    }
+
+    private static bool TryLoad(string path, out LibraryState? state)
+    {
+        state = null;
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return false;
+            }
+
+            state = JsonSerializer.Deserialize(File.ReadAllText(path), LibraryJsonContext.Default.LibraryState);
+            return state is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static LibraryState NormalizeLoadedState(LibraryState state)
+    {
+        state.SchemaVersion = CurrentSchemaVersion;
+        state.Prompts ??= [];
+        state.Links ??= [];
+        state.RecentPrompts ??= [];
+
+        foreach (QuickLinkEntry link in state.Links)
+        {
+            if (string.Equals(link.Title, "Codex", StringComparison.OrdinalIgnoreCase)
+                && string.Equals(link.Url, "https://chatgpt.com/codex", StringComparison.OrdinalIgnoreCase))
+            {
+                link.Url = "codex://threads/new";
+            }
+        }
+
+        return state;
     }
 
     private void SaveUnsafe()
     {
+        _state.SchemaVersion = CurrentSchemaVersion;
         string json = JsonSerializer.Serialize(_state, LibraryJsonContext.Default.LibraryState);
         string temp = _path + ".tmp";
         File.WriteAllText(temp, json);
+
+        if (File.Exists(_path))
+        {
+            try
+            {
+                File.Copy(_path, _backupPath, true);
+            }
+            catch
+            {
+            }
+        }
+
         File.Move(temp, _path, true);
     }
 
@@ -229,6 +304,7 @@ internal sealed class LibraryStore
 
     private static LibraryState CreateSeedState() => new()
     {
+        SchemaVersion = CurrentSchemaVersion,
         Prompts =
         [
             new PromptEntry
@@ -236,6 +312,7 @@ internal sealed class LibraryStore
                 Title = "Debug + improve",
                 Category = "Development",
                 Kind = "Prompt",
+                IsPinned = true,
                 Body = "Audit the current project, identify concrete bugs and weak points, test the critical paths, then implement focused improvements. Preserve working behavior and explain any remaining limitations.",
             },
             new PromptEntry
@@ -243,6 +320,7 @@ internal sealed class LibraryStore
                 Title = "Preserve existing features",
                 Category = "Development",
                 Kind = "Instruction",
+                IsPinned = true,
                 Body = "Do not remove existing working features just to simplify the implementation. Build on the current project unless a replacement is clearly safer and justified.",
             },
             new PromptEntry
@@ -256,7 +334,7 @@ internal sealed class LibraryStore
         Links =
         [
             new QuickLinkEntry { Title = "ChatGPT", Category = "AI", Url = "https://chatgpt.com/" },
-            new QuickLinkEntry { Title = "Codex", Category = "AI", Url = "https://chatgpt.com/codex" },
+            new QuickLinkEntry { Title = "Codex", Category = "AI", Url = "codex://threads/new" },
             new QuickLinkEntry { Title = "GitHub", Category = "Dev", Url = "https://github.com/" },
         ],
     };

@@ -9,6 +9,7 @@ internal sealed class PromptEntry
     public string Category { get; set; } = "General";
     public string Kind { get; set; } = "Prompt";
     public string Body { get; set; } = string.Empty;
+    public bool IsPinned { get; set; }
     public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
 }
 
@@ -32,6 +33,7 @@ internal sealed class RecentPromptEntry
 
 internal sealed class LibraryState
 {
+    public int SchemaVersion { get; set; } = 1;
     public List<PromptEntry> Prompts { get; set; } = [];
     public List<QuickLinkEntry> Links { get; set; } = [];
     public List<RecentPromptEntry> RecentPrompts { get; set; } = [];

@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -20,14 +20,8 @@ internal sealed partial class OpenUrlCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        try
-        {
-            Process.Start(new ProcessStartInfo(_url) { UseShellExecute = true });
-            return CommandResult.Dismiss();
-        }
-        catch
-        {
-            return CommandResult.ShowToast("Could not open link");
-        }
+        return AppLauncher.TryOpen(_url)
+            ? CommandResult.Dismiss()
+            : CommandResult.ShowToast("Could not open link");
     }
 }

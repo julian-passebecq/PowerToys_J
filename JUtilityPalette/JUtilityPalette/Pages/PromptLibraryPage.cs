@@ -1,6 +1,7 @@
 using JUtilityPalette.Commands;
 using JUtilityPalette.Data;
 using JUtilityPalette.Models;
+using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -8,8 +9,6 @@ namespace JUtilityPalette.Pages;
 
 internal sealed partial class PromptLibraryPage : ListPage
 {
-    private const string ChatGptUrl = "https://chatgpt.com/";
-    private const string CodexUrl = "https://chatgpt.com/codex";
     private readonly LibraryStore _store;
 
     public PromptLibraryPage(LibraryStore store)
@@ -30,31 +29,41 @@ internal sealed partial class PromptLibraryPage : ListPage
             new ListItem(new EditPromptPage(_store, null))
             {
                 Title = "+ Add prompt / instruction",
-                Subtitle = "Save a reusable base prompt or add-on",
+                Subtitle = "Create a reusable base prompt or add-on",
+            },
+            new ListItem(new CaptureClipboardPromptCommand(_store, "Prompt"))
+            {
+                Title = "Clipboard → Prompt",
+                Subtitle = "Save the current text clipboard immediately",
+            },
+            new ListItem(new CaptureClipboardPromptCommand(_store, "Instruction"))
+            {
+                Title = "Clipboard → Instruction",
+                Subtitle = "Save the current text clipboard as a reusable add-on",
             },
         ];
 
         string query = SearchText?.Trim() ?? string.Empty;
         foreach (PromptEntry prompt in _store.Prompts.Where(x => Matches(x, query)))
         {
-            List<IContextItem> more =
-            [
-                new CommandContextItem(new EditPromptPage(_store, prompt)) { Title = "Edit" },
-                new CommandContextItem(new DeletePromptCommand(_store, prompt.Id)) { Title = "Delete", IsCritical = true },
-            ];
+            List<IContextItem> more = [];
 
             if (prompt.Kind == "Prompt")
             {
-                more.Insert(0, new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = "Compose + copy" });
-                more.Insert(1, new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
-                more.Insert(2, new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, CodexUrl, "Copy + open Codex")) { Title = "Copy + open Codex" });
+                more.Add(new CommandContextItem(new ComposePromptPage(_store, prompt)) { Title = "Compose" });
+                more.Add(new CommandContextItem(new CopyPromptAndOpenCommand(_store, prompt, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" });
+                more.Add(new CommandContextItem(new OpenPromptInCodexCommand(_store, prompt)) { Title = "Open in Codex" });
             }
+
+            more.Add(new CommandContextItem(new TogglePromptPinCommand(_store, prompt)) { Title = prompt.IsPinned ? "Unpin" : "Pin" });
+            more.Add(new CommandContextItem(new EditPromptPage(_store, prompt)) { Title = "Edit" });
+            more.Add(new CommandContextItem(new DeletePromptCommand(_store, prompt.Id)) { Title = "Delete", IsCritical = true });
 
             items.Add(new ListItem(prompt.Kind == "Prompt"
                 ? new CopyPromptCommand(_store, prompt)
                 : new CopyTextCommand(prompt.Body, "Copy", "Instruction copied"))
             {
-                Title = prompt.Title,
+                Title = prompt.IsPinned ? $"★ {prompt.Title}" : prompt.Title,
                 Subtitle = $"{prompt.Kind} · {prompt.Category}",
                 MoreCommands = [.. more],
                 Details = new Details

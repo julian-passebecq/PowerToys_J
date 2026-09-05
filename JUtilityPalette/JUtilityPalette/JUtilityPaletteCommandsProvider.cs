@@ -1,6 +1,7 @@
 using JUtilityPalette.Commands;
 using JUtilityPalette.Data;
 using JUtilityPalette.Pages;
+using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -8,8 +9,6 @@ namespace JUtilityPalette;
 
 public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
 {
-    private const string ChatGptUrl = "https://chatgpt.com/";
-    private const string CodexUrl = "https://chatgpt.com/codex";
     private const string ChatGptCommandId = "com.julian.jutilitypalette.open-chatgpt";
     private const string CodexCommandId = "com.julian.jutilitypalette.open-codex";
 
@@ -24,15 +23,15 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
         DisplayName = "J Utility Palette";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
 
-        _chatGptCommand = new CommandItem(new OpenUrlCommand(ChatGptUrl, "Open ChatGPT", ChatGptCommandId))
+        _chatGptCommand = new CommandItem(new OpenUrlCommand(AppLauncher.ChatGptUrl, "Open ChatGPT", ChatGptCommandId))
         {
             Title = "ChatGPT",
             Subtitle = "Open ChatGPT",
         };
-        _codexCommand = new CommandItem(new OpenUrlCommand(CodexUrl, "Open Codex", CodexCommandId))
+        _codexCommand = new CommandItem(new OpenUrlCommand(AppLauncher.CodexNewChatUri, "Open Codex", CodexCommandId))
         {
-            Title = "Codex",
-            Subtitle = "Open Codex",
+            Title = "Codex Desktop",
+            Subtitle = "Open a new local Codex chat",
         };
 
         _commands =

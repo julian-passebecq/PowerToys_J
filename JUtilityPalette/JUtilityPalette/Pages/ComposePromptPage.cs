@@ -15,7 +15,7 @@ internal sealed partial class ComposePromptPage : ContentPage
     public ComposePromptPage(LibraryStore store, PromptEntry prompt)
     {
         Title = $"Compose · {prompt.Title}";
-        Name = "Compose + copy";
+        Name = "Compose";
         _form = new ComposePromptForm(store, prompt);
     }
 
@@ -34,19 +34,21 @@ internal sealed partial class ComposePromptForm : FormContent
         _prompt = prompt;
         _instructions = store.Prompts
             .Where(x => x.Kind == "Instruction")
-            .OrderBy(x => x.Category)
+            .OrderByDescending(x => x.IsPinned)
+            .ThenBy(x => x.Category)
             .ThenBy(x => x.Title)
             .ToArray();
 
         List<string> body =
         [
             $$"""{ "type": "TextBlock", "text": {{Encode($"Base prompt: {prompt.Title}")}}, "weight": "Bolder", "wrap": true }""",
-            """{ "type": "TextBlock", "text": "Select reusable instructions to append.", "isSubtle": true, "wrap": true }""",
+            """{ "type": "TextBlock", "text": "Select reusable instructions and add anything specific to this run.", "isSubtle": true, "wrap": true }""",
         ];
 
         foreach (PromptEntry instruction in _instructions)
         {
-            body.Add($$"""{ "type": "Input.Toggle", "id": "addon_{{instruction.Id:N}}", "title": {{Encode($"{instruction.Category} · {instruction.Title}")}}, "valueOn": "true", "valueOff": "false" }""");
+            string title = instruction.IsPinned ? $"★ {instruction.Category} · {instruction.Title}" : $"{instruction.Category} · {instruction.Title}";
+            body.Add($$"""{ "type": "Input.Toggle", "id": "addon_{{instruction.Id:N}}", "title": {{Encode(title)}}, "valueOn": "true", "valueOff": "false" }""");
         }
 
         body.Add("""{ "type": "Input.Text", "id": "extra", "label": "One-off addition", "placeholder": "Anything specific for this chat...", "isMultiline": true }""");
@@ -60,7 +62,9 @@ internal sealed partial class ComposePromptForm : FormContent
     {{string.Join(",\n    ", body)}}
   ],
   "actions": [
-    { "type": "Action.Submit", "title": "Copy final prompt" }
+    { "type": "Action.Submit", "title": "Copy", "data": { "target": "copy" } },
+    { "type": "Action.Submit", "title": "ChatGPT", "data": { "target": "chatgpt" } },
+    { "type": "Action.Submit", "title": "Codex", "data": { "target": "codex" } }
   ]
 }
 """;
@@ -97,6 +101,22 @@ internal sealed partial class ComposePromptForm : FormContent
         ClipboardText.Set(finalPrompt);
         string historyTitle = addOnCount == 0 ? _prompt.Title : $"{_prompt.Title} · +{addOnCount}";
         _store.AddRecentPrompt(historyTitle, finalPrompt, _prompt.Id);
+
+        string target = input["target"]?.ToString() ?? "copy";
+        if (string.Equals(target, "codex", StringComparison.OrdinalIgnoreCase))
+        {
+            return AppLauncher.TryOpenCodex(finalPrompt)
+                ? CommandResult.Dismiss()
+                : CommandResult.ShowToast("Prompt copied, but Codex could not be opened");
+        }
+
+        if (string.Equals(target, "chatgpt", StringComparison.OrdinalIgnoreCase))
+        {
+            return AppLauncher.TryOpenChatGpt()
+                ? CommandResult.Dismiss()
+                : CommandResult.ShowToast("Prompt copied, but ChatGPT could not be opened");
+        }
+
         return CommandResult.ShowToast("Composed prompt copied");
     }
 

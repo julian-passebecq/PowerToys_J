@@ -1,6 +1,7 @@
 using JUtilityPalette.Commands;
 using JUtilityPalette.Data;
 using JUtilityPalette.Models;
+using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
 
@@ -8,8 +9,6 @@ namespace JUtilityPalette.Pages;
 
 internal sealed partial class RecentPromptsPage : ListPage
 {
-    private const string ChatGptUrl = "https://chatgpt.com/";
-    private const string CodexUrl = "https://chatgpt.com/codex";
     private readonly LibraryStore _store;
 
     public RecentPromptsPage(LibraryStore store)
@@ -36,8 +35,9 @@ internal sealed partial class RecentPromptsPage : ListPage
                 Subtitle = recent.CreatedUtc.LocalDateTime.ToString("g"),
                 MoreCommands =
                 [
-                    new CommandContextItem(new CopyTextAndOpenCommand(recent.Text, ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" },
-                    new CommandContextItem(new CopyTextAndOpenCommand(recent.Text, CodexUrl, "Copy + open Codex")) { Title = "Copy + open Codex" },
+                    new CommandContextItem(new CopyTextAndOpenCommand(recent.Text, AppLauncher.ChatGptUrl, "Copy + open ChatGPT")) { Title = "Copy + open ChatGPT" },
+                    new CommandContextItem(new OpenTextInCodexCommand(recent.Text)) { Title = "Open in Codex" },
+                    new CommandContextItem(new SaveTextAsPromptCommand(_store, recent.Title, recent.Text)) { Title = "Save to prompt library" },
                     new CommandContextItem(new DeleteRecentPromptCommand(_store, recent.Id)) { Title = "Remove from history", IsCritical = true },
                 ],
                 Details = new Details

@@ -10,6 +10,7 @@ var tests = new (string Name, Action Body)[]
     ("Prompt top recall", TestPromptTopRecall),
     ("Fallback prefix parsing", TestFallbackPrefixParsing),
     ("Recent prompt cap and dedupe", TestRecentPromptCapAndDedupe),
+    ("Quick link normalization", TestQuickLinkNormalization),
     ("Backup recovery", TestBackupRecovery),
     ("Legacy Codex link migration", TestLegacyCodexMigration),
     ("Codex deep-link target", TestCodexDeepLinkTarget),
@@ -116,6 +117,30 @@ static void TestRecentPromptCapAndDedupe()
         store.AddRecentPrompt("Reused", "Text 20", Guid.Empty);
         Assert(store.RecentPrompts.Count == 25, "Reusing an exact prompt must not create a duplicate.");
         Assert(store.RecentPrompts[0].Title == "Reused" && store.RecentPrompts[0].Text == "Text 20", "Reused prompt should move to the top.");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
+static void TestQuickLinkNormalization()
+{
+    string directory = NewTempDirectory();
+    try
+    {
+        var store = new LibraryStore(directory);
+        int initialCount = store.Links.Count;
+
+        Assert(store.UpsertLink(Guid.Empty, "Example", "Test", "example.com"), "Bare host should normalize to HTTPS.");
+        Assert(store.Links.Single(x => x.Title == "Example").Url == "https://example.com/", "Bare host was not normalized to the expected HTTPS URL.");
+
+        Assert(store.UpsertLink(Guid.Empty, "Codex custom", "Test", "codex://threads/new"), "Valid custom protocol links should remain supported.");
+        Assert(store.Links.Single(x => x.Title == "Codex custom").Url == "codex://threads/new", "Custom protocol link was changed unexpectedly.");
+
+        int beforeInvalid = store.Links.Count;
+        Assert(!store.UpsertLink(Guid.Empty, "Broken", "Test", "https://"), "Malformed HTTP URL should be rejected.");
+        Assert(store.Links.Count == beforeInvalid && store.Links.Count == initialCount + 2, "Rejected link must not mutate persisted state.");
     }
     finally
     {

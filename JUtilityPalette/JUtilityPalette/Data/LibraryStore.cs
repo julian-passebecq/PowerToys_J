@@ -129,12 +129,11 @@ internal sealed class LibraryStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
-    public void UpsertLink(Guid id, string title, string category, string url)
+    public bool UpsertLink(Guid id, string title, string category, string url)
     {
-        string normalizedUrl = url.Trim();
-        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out _))
+        if (!TryNormalizeLinkUrl(url, out string normalizedUrl))
         {
-            normalizedUrl = "https://" + normalizedUrl;
+            return false;
         }
 
         lock (_gate)
@@ -163,6 +162,7 @@ internal sealed class LibraryStore
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+        return true;
     }
 
     public void DeleteLink(Guid id)
@@ -307,6 +307,34 @@ internal sealed class LibraryStore
         }
 
         File.Move(temp, _path, true);
+    }
+
+    private static bool TryNormalizeLinkUrl(string url, out string normalizedUrl)
+    {
+        normalizedUrl = url.Trim();
+        if (normalizedUrl.Length == 0)
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out Uri? parsed))
+        {
+            normalizedUrl = "https://" + normalizedUrl;
+            if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out parsed))
+            {
+                return false;
+            }
+        }
+
+        if ((string.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+            || string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase))
+            && string.IsNullOrWhiteSpace(parsed.Host))
+        {
+            return false;
+        }
+
+        normalizedUrl = parsed.AbsoluteUri;
+        return true;
     }
 
     private static string Normalize(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();

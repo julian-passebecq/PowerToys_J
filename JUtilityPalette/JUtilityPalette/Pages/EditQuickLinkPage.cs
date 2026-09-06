@@ -42,7 +42,7 @@ internal sealed partial class EditQuickLinkForm : FormContent
   "body": [
     { "type": "Input.Text", "id": "title", "label": "Title", "value": {{Encode(title)}}, "isRequired": true, "errorMessage": "Title is required" },
     { "type": "Input.Text", "id": "category", "label": "Category", "value": {{Encode(category)}}, "placeholder": "Later, AI, Dev, Research..." },
-    { "type": "Input.Text", "id": "url", "label": "URL", "value": {{Encode(url)}}, "isRequired": true, "errorMessage": "URL is required", "placeholder": "https://..." }
+    { "type": "Input.Text", "id": "url", "label": "URL or protocol link", "value": {{Encode(url)}}, "isRequired": true, "errorMessage": "URL is required", "placeholder": "https://... or codex://..." }
   ],
   "actions": [
     { "type": "Action.Submit", "title": "Save" }
@@ -59,13 +59,15 @@ internal sealed partial class EditQuickLinkForm : FormContent
             return CommandResult.GoHome();
         }
 
-        _store.UpsertLink(
+        bool saved = _store.UpsertLink(
             _id,
             input["title"]?.ToString() ?? string.Empty,
             input["category"]?.ToString() ?? string.Empty,
             input["url"]?.ToString() ?? string.Empty);
 
-        return CommandResult.GoHome();
+        return saved
+            ? CommandResult.GoHome()
+            : CommandResult.ShowToast("Enter a valid URL or protocol link");
     }
 
     private static string Encode(string value) => JsonSerializer.Serialize(value, LibraryJsonContext.Default.String);

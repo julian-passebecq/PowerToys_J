@@ -1,8 +1,10 @@
 using JUtilityPalette.Commands;
 using JUtilityPalette.Data;
 using JUtilityPalette.Pages;
+using JUtilityPalette.Utilities;
 using Microsoft.CommandPalette.Extensions;
 using Microsoft.CommandPalette.Extensions.Toolkit;
+using JOpenUrlCommand = JUtilityPalette.Commands.OpenUrlCommand;
 
 namespace JUtilityPalette;
 
@@ -10,28 +12,24 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
 {
     private const string PromptsCommandId = "com.julian.jutilitypalette.prompts";
     private const string ProjectsCommandId = "com.julian.jutilitypalette.projects";
+    private const string SystemCommandId = "com.julian.jutilitypalette.system";
+    private const string ChatGptCommandId = "com.julian.jutilitypalette.open-chatgpt";
+    private const string CodexCommandId = "com.julian.jutilitypalette.open-codex";
 
     private readonly LibraryStore _store = new();
     private readonly ICommandItem[] _commands;
     private readonly IFallbackCommandItem[] _fallbackCommands;
     private readonly ICommandItem _promptLibraryCommand;
     private readonly ICommandItem _projectsCommand;
+    private readonly ICommandItem _systemCommand;
+    private readonly ICommandItem _chatGptCommand;
+    private readonly ICommandItem _codexCommand;
 
     public JUtilityPaletteCommandsProvider()
     {
         Id = "com.julian.jutilitypalette";
-        DisplayName = "J Utility Palette - Minimal";
+        DisplayName = "J Utility Palette - Full";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
-
-        var promptLibraryPage = new PromptLibraryPage(_store)
-        {
-            Id = PromptsCommandId,
-        };
-        _promptLibraryCommand = new CommandItem(promptLibraryPage)
-        {
-            Title = "J Prompts",
-            Subtitle = "Reusable copy/paste prompts and instructions",
-        };
 
         var projectsPage = new ProjectClipboardPage(_store)
         {
@@ -40,7 +38,41 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
         _projectsCommand = new CommandItem(projectsPage)
         {
             Title = "J Project Clipboard",
-            Subtitle = "Paired repo/site links with copy-row controls",
+            Subtitle = "Repo + site + optional third link; copy one row or all",
+        };
+
+        var promptLibraryPage = new PromptLibraryPage(_store)
+        {
+            Id = PromptsCommandId,
+        };
+        _promptLibraryCommand = new CommandItem(promptLibraryPage)
+        {
+            Title = "J Prompts",
+            Subtitle = "Reusable prompts + composable instructions",
+        };
+
+        var systemShortcutsPage = new SystemShortcutsPage
+        {
+            Id = SystemCommandId,
+        };
+        _systemCommand = new CommandItem(systemShortcutsPage)
+        {
+            Title = "J System",
+            Subtitle = "Hosts, environment variables, and Task Manager",
+        };
+
+        var chatGptLauncher = new JOpenUrlCommand(AppLauncher.ChatGptUrl, "Open ChatGPT", ChatGptCommandId);
+        _chatGptCommand = new CommandItem(chatGptLauncher)
+        {
+            Title = "ChatGPT",
+            Subtitle = "Open ChatGPT",
+        };
+
+        var codexLauncher = new JOpenUrlCommand(AppLauncher.CodexNewChatUri, "Open Codex", CodexCommandId);
+        _codexCommand = new CommandItem(codexLauncher)
+        {
+            Title = "Codex",
+            Subtitle = "Open a new local Codex chat",
         };
 
         _commands =
@@ -50,8 +82,16 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
             new CommandItem(new RecentPromptsPage(_store))
             {
                 Title = "J Recent Prompts",
-                Subtitle = "Remember the last prompts you actually used",
+                Subtitle = "Last 25 prompts you actually used",
             },
+            new CommandItem(new QuickLinksPage(_store))
+            {
+                Title = "J Quick Links",
+                Subtitle = "Unpaired temporary links",
+            },
+            _systemCommand,
+            _chatGptCommand,
+            _codexCommand,
         ];
 
         _fallbackCommands =
@@ -65,6 +105,9 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
             new PromptFallbackCommandItem(_store, 0, "jc", PromptFallbackAction.Codex),
             new PromptFallbackCommandItem(_store, 1, "jc", PromptFallbackAction.Codex),
             new PromptFallbackCommandItem(_store, 2, "jc", PromptFallbackAction.Codex),
+            new SystemShortcutFallbackCommandItem(0),
+            new SystemShortcutFallbackCommandItem(1),
+            new SystemShortcutFallbackCommandItem(2),
         ];
     }
 
@@ -76,6 +119,9 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
     {
         PromptsCommandId => _promptLibraryCommand,
         ProjectsCommandId => _projectsCommand,
+        SystemCommandId => _systemCommand,
+        ChatGptCommandId => _chatGptCommand,
+        CodexCommandId => _codexCommand,
         _ => null,
     };
 }

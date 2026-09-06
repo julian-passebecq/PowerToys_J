@@ -22,6 +22,24 @@ internal sealed class QuickLinkEntry
     public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
 }
 
+internal sealed class ProjectLinkEntry
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public string Name { get; set; } = string.Empty;
+    public string Category { get; set; } = "Projects";
+    public string Note { get; set; } = string.Empty;
+    public string RepoUrl { get; set; } = string.Empty;
+    public string SiteUrl { get; set; } = string.Empty;
+    public string ExtraLabel { get; set; } = "Extra";
+    public string ExtraUrl { get; set; } = string.Empty;
+    public bool CopyName { get; set; } = true;
+    public bool CopyRepo { get; set; } = true;
+    public bool CopySite { get; set; } = true;
+    public bool CopyExtra { get; set; }
+    public bool IncludeInCopyAll { get; set; } = true;
+    public DateTimeOffset UpdatedUtc { get; set; } = DateTimeOffset.UtcNow;
+}
+
 internal sealed class RecentPromptEntry
 {
     public Guid Id { get; set; } = Guid.NewGuid();
@@ -33,9 +51,10 @@ internal sealed class RecentPromptEntry
 
 internal sealed class LibraryState
 {
-    public int SchemaVersion { get; set; } = 1;
+    public int SchemaVersion { get; set; } = 2;
     public List<PromptEntry> Prompts { get; set; } = [];
     public List<QuickLinkEntry> Links { get; set; } = [];
+    public List<ProjectLinkEntry> Projects { get; set; } = [];
     public List<RecentPromptEntry> RecentPrompts { get; set; } = [];
 }
 

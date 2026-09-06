@@ -11,6 +11,8 @@ var tests = new (string Name, Action Body)[]
     ("Fallback prefix parsing", TestFallbackPrefixParsing),
     ("Recent prompt cap and dedupe", TestRecentPromptCapAndDedupe),
     ("Quick link normalization", TestQuickLinkNormalization),
+    ("Project clipboard formatting", TestProjectClipboardFormatting),
+    ("Project clipboard seeds", TestProjectClipboardSeeds),
     ("Backup recovery", TestBackupRecovery),
     ("Legacy Codex link migration", TestLegacyCodexMigration),
     ("Codex deep-link target", TestCodexDeepLinkTarget),
@@ -148,6 +150,64 @@ static void TestQuickLinkNormalization()
     }
 }
 
+static void TestProjectClipboardFormatting()
+{
+    var visual = new ProjectLinkEntry
+    {
+        Name = "VisualAlgo",
+        RepoUrl = "https://github.com/julian-passebecq/Fluent2_J_VisualAlgo",
+        SiteUrl = "https://fluent2jvisualalgo.netlify.app/",
+        ExtraLabel = "Netlify",
+        ExtraUrl = "https://app.netlify.com/",
+        CopyName = true,
+        CopyRepo = true,
+        CopySite = true,
+        CopyExtra = false,
+        IncludeInCopyAll = true,
+    };
+
+    string line = LibraryStore.FormatProjectLine(visual);
+    Assert(line == "VisualAlgo https://github.com/julian-passebecq/Fluent2_J_VisualAlgo https://fluent2jvisualalgo.netlify.app/", "Project row should copy only enabled fields in stable order.");
+
+    visual.CopySite = false;
+    visual.CopyExtra = true;
+    Assert(LibraryStore.FormatProjectLine(visual).EndsWith("https://app.netlify.com/", StringComparison.Ordinal), "Third link should be independently includable.");
+    Assert(!LibraryStore.FormatProjectLine(visual).Contains("fluent2jvisualalgo.netlify.app", StringComparison.Ordinal), "Disabled site must not leak into the copied row.");
+
+    var cloud = new ProjectLinkEntry
+    {
+        Name = "CloudArchi",
+        RepoUrl = "https://github.com/julian-passebecq/Fluent2_J_CloudArchi",
+        SiteUrl = "https://f2jcloudarchi.netlify.app/",
+        IncludeInCopyAll = false,
+    };
+
+    string all = LibraryStore.FormatAllProjectLines([visual, cloud]);
+    Assert(!all.Contains("CloudArchi", StringComparison.Ordinal), "Copy all must honor the row-level include switch.");
+}
+
+static void TestProjectClipboardSeeds()
+{
+    string directory = NewTempDirectory();
+    try
+    {
+        var store = new LibraryStore(directory);
+        ProjectLinkEntry visual = store.Projects.Single(x => x.Name == "VisualAlgo");
+        Assert(visual.RepoUrl == "https://github.com/julian-passebecq/Fluent2_J_VisualAlgo", "VisualAlgo repo seed is wrong.");
+        Assert(visual.SiteUrl == "https://fluent2jvisualalgo.netlify.app/", "VisualAlgo site seed is wrong.");
+
+        ProjectLinkEntry cloud = store.Projects.Single(x => x.Name == "CloudArchi");
+        Assert(cloud.RepoUrl == "https://github.com/julian-passebecq/Fluent2_J_CloudArchi", "CloudArchi repo seed is wrong.");
+        Assert(cloud.SiteUrl == "https://f2jcloudarchi.netlify.app/", "CloudArchi site seed is wrong.");
+
+        Assert(!store.UpsertProject(Guid.Empty, "Bad", "Test", "", "https://", "", "Extra", "", true, true, true, false, true), "Malformed project links should be rejected.");
+    }
+    finally
+    {
+        DeleteDirectory(directory);
+    }
+}
+
 static void TestBackupRecovery()
 {
     string directory = NewTempDirectory();
@@ -174,6 +234,7 @@ static void TestLegacyCodexMigration()
     {
         var state = new LibraryState
         {
+            SchemaVersion = 1,
             Links =
             [
                 new QuickLinkEntry { Title = "Codex", Category = "AI", Url = "https://chatgpt.com/codex" },
@@ -184,6 +245,7 @@ static void TestLegacyCodexMigration()
 
         var store = new LibraryStore(directory);
         Assert(store.Links.Single().Url == "codex://threads/new", "Legacy Codex links should migrate to the desktop protocol.");
+        Assert(store.Projects.Count == 2, "Schema v1 migration should seed the two project-pair examples once.");
     }
     finally
     {

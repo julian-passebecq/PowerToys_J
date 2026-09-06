@@ -5,7 +5,7 @@ namespace JUtilityPalette.Data;
 
 internal sealed class LibraryStore
 {
-    private const int CurrentSchemaVersion = 1;
+    private const int CurrentSchemaVersion = 2;
     private const int MaxRecentPrompts = 25;
     private readonly object _gate = new();
     private readonly string _path;
@@ -53,6 +53,20 @@ internal sealed class LibraryStore
             lock (_gate)
             {
                 return _state.Links.OrderBy(x => x.Category).ThenBy(x => x.Title).ToArray();
+            }
+        }
+    }
+
+    public IReadOnlyList<ProjectLinkEntry> Projects
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _state.Projects
+                    .OrderBy(x => x.Category)
+                    .ThenBy(x => x.Name)
+                    .ToArray();
             }
         }
     }
@@ -176,6 +190,115 @@ internal sealed class LibraryStore
         Changed?.Invoke(this, EventArgs.Empty);
     }
 
+    public bool UpsertProject(
+        Guid id,
+        string name,
+        string category,
+        string note,
+        string repoUrl,
+        string siteUrl,
+        string extraLabel,
+        string extraUrl,
+        bool copyName,
+        bool copyRepo,
+        bool copySite,
+        bool copyExtra,
+        bool includeInCopyAll)
+    {
+        if (!TryNormalizeOptionalWebUrl(repoUrl, out string normalizedRepo)
+            || !TryNormalizeOptionalWebUrl(siteUrl, out string normalizedSite)
+            || !TryNormalizeOptionalWebUrl(extraUrl, out string normalizedExtra))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(normalizedRepo)
+            && string.IsNullOrWhiteSpace(normalizedSite)
+            && string.IsNullOrWhiteSpace(normalizedExtra))
+        {
+            return false;
+        }
+
+        lock (_gate)
+        {
+            ProjectLinkEntry? existing = _state.Projects.FirstOrDefault(x => x.Id == id);
+            if (existing is null)
+            {
+                _state.Projects.Add(new ProjectLinkEntry
+                {
+                    Id = id == Guid.Empty ? Guid.NewGuid() : id,
+                    Name = Normalize(name, "Untitled project"),
+                    Category = Normalize(category, "Projects"),
+                    Note = note.Trim(),
+                    RepoUrl = normalizedRepo,
+                    SiteUrl = normalizedSite,
+                    ExtraLabel = Normalize(extraLabel, "Extra"),
+                    ExtraUrl = normalizedExtra,
+                    CopyName = copyName,
+                    CopyRepo = copyRepo,
+                    CopySite = copySite,
+                    CopyExtra = copyExtra,
+                    IncludeInCopyAll = includeInCopyAll,
+                    UpdatedUtc = DateTimeOffset.UtcNow,
+                });
+            }
+            else
+            {
+                existing.Name = Normalize(name, "Untitled project");
+                existing.Category = Normalize(category, "Projects");
+                existing.Note = note.Trim();
+                existing.RepoUrl = normalizedRepo;
+                existing.SiteUrl = normalizedSite;
+                existing.ExtraLabel = Normalize(extraLabel, "Extra");
+                existing.ExtraUrl = normalizedExtra;
+                existing.CopyName = copyName;
+                existing.CopyRepo = copyRepo;
+                existing.CopySite = copySite;
+                existing.CopyExtra = copyExtra;
+                existing.IncludeInCopyAll = includeInCopyAll;
+                existing.UpdatedUtc = DateTimeOffset.UtcNow;
+            }
+
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+        return true;
+    }
+
+    public void UpdateProjectCopyFlags(Guid id, bool copyName, bool copyRepo, bool copySite, bool copyExtra, bool includeInCopyAll)
+    {
+        lock (_gate)
+        {
+            ProjectLinkEntry? project = _state.Projects.FirstOrDefault(x => x.Id == id);
+            if (project is null)
+            {
+                return;
+            }
+
+            project.CopyName = copyName;
+            project.CopyRepo = copyRepo;
+            project.CopySite = copySite;
+            project.CopyExtra = copyExtra;
+            project.IncludeInCopyAll = includeInCopyAll;
+            project.UpdatedUtc = DateTimeOffset.UtcNow;
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void DeleteProject(Guid id)
+    {
+        lock (_gate)
+        {
+            _state.Projects.RemoveAll(x => x.Id == id);
+            SaveUnsafe();
+        }
+
+        Changed?.Invoke(this, EventArgs.Empty);
+    }
+
     public void AddRecentPrompt(string title, string text, Guid sourcePromptId)
     {
         string normalized = text.Trim();
@@ -221,6 +344,42 @@ internal sealed class LibraryStore
         }
 
         Changed?.Invoke(this, EventArgs.Empty);
+    }
+
+    internal static string FormatProjectLine(ProjectLinkEntry project)
+    {
+        List<string> parts = [];
+        if (project.CopyName && !string.IsNullOrWhiteSpace(project.Name))
+        {
+            parts.Add(project.Name.Trim());
+        }
+
+        if (project.CopyRepo && !string.IsNullOrWhiteSpace(project.RepoUrl))
+        {
+            parts.Add(project.RepoUrl);
+        }
+
+        if (project.CopySite && !string.IsNullOrWhiteSpace(project.SiteUrl))
+        {
+            parts.Add(project.SiteUrl);
+        }
+
+        if (project.CopyExtra && !string.IsNullOrWhiteSpace(project.ExtraUrl))
+        {
+            parts.Add(project.ExtraUrl);
+        }
+
+        return string.Join(" ", parts);
+    }
+
+    internal static string FormatAllProjectLines(IEnumerable<ProjectLinkEntry> projects)
+    {
+        return string.Join(
+            Environment.NewLine,
+            projects
+                .Where(x => x.IncludeInCopyAll)
+                .Select(FormatProjectLine)
+                .Where(x => !string.IsNullOrWhiteSpace(x)));
     }
 
     private LibraryState LoadOrCreate()
@@ -271,9 +430,10 @@ internal sealed class LibraryStore
 
     private static LibraryState NormalizeLoadedState(LibraryState state)
     {
-        state.SchemaVersion = CurrentSchemaVersion;
+        int incomingVersion = state.SchemaVersion;
         state.Prompts ??= [];
         state.Links ??= [];
+        state.Projects ??= [];
         state.RecentPrompts ??= [];
 
         foreach (QuickLinkEntry link in state.Links)
@@ -285,6 +445,12 @@ internal sealed class LibraryStore
             }
         }
 
+        if (incomingVersion < 2 && state.Projects.Count == 0)
+        {
+            state.Projects.AddRange(CreateSeedProjects());
+        }
+
+        state.SchemaVersion = CurrentSchemaVersion;
         return state;
     }
 
@@ -311,19 +477,18 @@ internal sealed class LibraryStore
 
     private static bool TryNormalizeLinkUrl(string url, out string normalizedUrl)
     {
-        normalizedUrl = url.Trim();
-        if (normalizedUrl.Length == 0)
+        string raw = url.Trim();
+        normalizedUrl = raw;
+        if (raw.Length == 0)
         {
             return false;
         }
 
-        if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out Uri? parsed))
+        bool hasExplicitScheme = raw.Contains("://", StringComparison.Ordinal);
+        string candidate = hasExplicitScheme ? raw : "https://" + raw;
+        if (!Uri.TryCreate(candidate, UriKind.Absolute, out Uri? parsed))
         {
-            normalizedUrl = "https://" + normalizedUrl;
-            if (!Uri.TryCreate(normalizedUrl, UriKind.Absolute, out parsed))
-            {
-                return false;
-            }
+            return false;
         }
 
         if ((string.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
@@ -337,7 +502,57 @@ internal sealed class LibraryStore
         return true;
     }
 
+    private static bool TryNormalizeOptionalWebUrl(string url, out string normalizedUrl)
+    {
+        normalizedUrl = string.Empty;
+        if (string.IsNullOrWhiteSpace(url))
+        {
+            return true;
+        }
+
+        if (!TryNormalizeLinkUrl(url, out string candidate)
+            || !Uri.TryCreate(candidate, UriKind.Absolute, out Uri? parsed)
+            || (!string.Equals(parsed.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
+                && !string.Equals(parsed.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)))
+        {
+            return false;
+        }
+
+        normalizedUrl = parsed.AbsoluteUri;
+        return true;
+    }
+
     private static string Normalize(string value, string fallback) => string.IsNullOrWhiteSpace(value) ? fallback : value.Trim();
+
+    private static List<ProjectLinkEntry> CreateSeedProjects() =>
+    [
+        new ProjectLinkEntry
+        {
+            Name = "VisualAlgo",
+            Category = "Fluent2 J Consumers",
+            Note = "Visual Algorithms consumer: repository + deployed validation site.",
+            RepoUrl = "https://github.com/julian-passebecq/Fluent2_J_VisualAlgo",
+            SiteUrl = "https://fluent2jvisualalgo.netlify.app/",
+            CopyName = true,
+            CopyRepo = true,
+            CopySite = true,
+            CopyExtra = false,
+            IncludeInCopyAll = true,
+        },
+        new ProjectLinkEntry
+        {
+            Name = "CloudArchi",
+            Category = "Fluent2 J Consumers",
+            Note = "Cloud Architecture consumer: repository + deployed validation site.",
+            RepoUrl = "https://github.com/julian-passebecq/Fluent2_J_CloudArchi",
+            SiteUrl = "https://f2jcloudarchi.netlify.app/",
+            CopyName = true,
+            CopyRepo = true,
+            CopySite = true,
+            CopyExtra = false,
+            IncludeInCopyAll = true,
+        },
+    ];
 
     private static LibraryState CreateSeedState() => new()
     {
@@ -374,5 +589,6 @@ internal sealed class LibraryStore
             new QuickLinkEntry { Title = "Codex", Category = "AI", Url = "codex://threads/new" },
             new QuickLinkEntry { Title = "GitHub", Category = "Dev", Url = "https://github.com/" },
         ],
+        Projects = CreateSeedProjects(),
     };
 }

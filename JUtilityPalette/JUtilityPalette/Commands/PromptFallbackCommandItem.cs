@@ -26,7 +26,7 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
     {
         _store = store;
         _rank = rank;
-        _prefix = prefix;
+        _prefix = prefix.Trim();
         _action = action;
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
         Hide();
@@ -34,14 +34,12 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
 
     public override void UpdateQuery(string query)
     {
-        string normalized = query.TrimStart();
-        if (!normalized.StartsWith(_prefix, StringComparison.OrdinalIgnoreCase))
+        if (!FallbackPrefix.TryExtract(query, _prefix, out string search))
         {
             Hide();
             return;
         }
 
-        string search = normalized[_prefix.Length..].Trim();
         bool promptsOnly = _action != PromptFallbackAction.Copy;
         IReadOnlyList<PromptEntry> matches = search.Length == 0
             ? PromptMatcher.Top(_store.Prompts, promptsOnly)

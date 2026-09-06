@@ -5,7 +5,7 @@ namespace JUtilityPalette.Commands;
 
 internal sealed partial class SystemShortcutFallbackCommandItem : FallbackCommandItem
 {
-    private const string Prefix = "js ";
+    private const string Prefix = "js";
     private readonly int _rank;
 
     public SystemShortcutFallbackCommandItem(int rank)
@@ -18,14 +18,12 @@ internal sealed partial class SystemShortcutFallbackCommandItem : FallbackComman
 
     public override void UpdateQuery(string query)
     {
-        string normalized = query.TrimStart();
-        if (!normalized.StartsWith(Prefix, StringComparison.OrdinalIgnoreCase))
+        if (!FallbackPrefix.TryExtract(query, Prefix, out string search))
         {
             Hide();
             return;
         }
 
-        string search = normalized[Prefix.Length..].Trim();
         SystemShortcutDefinition? definition = SystemShortcutCatalog.Rank(search).Skip(_rank).FirstOrDefault();
         if (definition is null)
         {

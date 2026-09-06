@@ -22,7 +22,6 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
     private readonly ICommandItem _systemCommand;
     private readonly ICommandItem _chatGptCommand;
     private readonly ICommandItem _codexCommand;
-    private readonly ICommandItem _workflowDockBand;
 
     public JUtilityPaletteCommandsProvider()
     {
@@ -64,15 +63,6 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
             Subtitle = "Open a new local Codex chat",
         };
 
-        _workflowDockBand = new WrappedDockItem(
-            [
-                new ListItem(promptLibraryPage) { Title = "Prompts" },
-                new ListItem(chatGptLauncher) { Title = "ChatGPT" },
-                new ListItem(codexLauncher) { Title = "Codex" },
-            ],
-            "com.julian.jutilitypalette.dock.workflow",
-            "J Workflow");
-
         _commands =
         [
             _promptLibraryCommand,
@@ -93,15 +83,15 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
 
         _fallbackCommands =
         [
-            new PromptFallbackCommandItem(_store, 0, "j ", PromptFallbackAction.Copy),
-            new PromptFallbackCommandItem(_store, 1, "j ", PromptFallbackAction.Copy),
-            new PromptFallbackCommandItem(_store, 2, "j ", PromptFallbackAction.Copy),
-            new PromptFallbackCommandItem(_store, 0, "jg ", PromptFallbackAction.ChatGpt),
-            new PromptFallbackCommandItem(_store, 1, "jg ", PromptFallbackAction.ChatGpt),
-            new PromptFallbackCommandItem(_store, 2, "jg ", PromptFallbackAction.ChatGpt),
-            new PromptFallbackCommandItem(_store, 0, "jc ", PromptFallbackAction.Codex),
-            new PromptFallbackCommandItem(_store, 1, "jc ", PromptFallbackAction.Codex),
-            new PromptFallbackCommandItem(_store, 2, "jc ", PromptFallbackAction.Codex),
+            new PromptFallbackCommandItem(_store, 0, "j", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 1, "j", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 2, "j", PromptFallbackAction.Copy),
+            new PromptFallbackCommandItem(_store, 0, "jg", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 1, "jg", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 2, "jg", PromptFallbackAction.ChatGpt),
+            new PromptFallbackCommandItem(_store, 0, "jc", PromptFallbackAction.Codex),
+            new PromptFallbackCommandItem(_store, 1, "jc", PromptFallbackAction.Codex),
+            new PromptFallbackCommandItem(_store, 2, "jc", PromptFallbackAction.Codex),
             new SystemShortcutFallbackCommandItem(0),
             new SystemShortcutFallbackCommandItem(1),
             new SystemShortcutFallbackCommandItem(2),
@@ -111,8 +101,6 @@ public sealed partial class JUtilityPaletteCommandsProvider : CommandProvider
     public override ICommandItem[] TopLevelCommands() => _commands;
 
     public override IFallbackCommandItem[] FallbackCommands() => _fallbackCommands;
-
-    public override ICommandItem[]? GetDockBands() => [_workflowDockBand];
 
     public override ICommandItem? GetCommandItem(string id) => id switch
     {

@@ -13,6 +13,7 @@
     <Compile Include="..\JUtilityPalette\Data\LibraryStore.cs" Link="Source\LibraryStore.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\PromptTemplate.cs" Link="Source\PromptTemplate.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\PromptMatcher.cs" Link="Source\PromptMatcher.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\FallbackPrefix.cs" Link="Source\FallbackPrefix.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\PowerToysBridge.cs" Link="Source\PowerToysBridge.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\SystemShortcutCatalog.cs" Link="Source\SystemShortcutCatalog.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\AppLauncher.cs" Link="Source\AppLauncher.cs" />

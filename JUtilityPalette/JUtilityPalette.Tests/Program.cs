@@ -8,6 +8,7 @@ var tests = new (string Name, Action Body)[]
     ("Template variables", TestTemplateVariables),
     ("Prompt ranking", TestPromptRanking),
     ("Prompt top recall", TestPromptTopRecall),
+    ("Fallback prefix parsing", TestFallbackPrefixParsing),
     ("Recent prompt cap and dedupe", TestRecentPromptCapAndDedupe),
     ("Backup recovery", TestBackupRecovery),
     ("Legacy Codex link migration", TestLegacyCodexMigration),
@@ -86,6 +87,15 @@ static void TestPromptTopRecall()
     IReadOnlyList<PromptEntry> promptOnly = PromptMatcher.Top(prompts, promptsOnly: true);
     Assert(promptOnly.All(x => x.Kind == "Prompt"), "ChatGPT/Codex top recall must exclude instructions.");
     Assert(promptOnly[0].Title == "Pinned prompt", "Pinned prompt should lead prompt-only top recall.");
+}
+
+static void TestFallbackPrefixParsing()
+{
+    Assert(FallbackPrefix.TryExtract("j", "j", out string top) && top.Length == 0, "Exact prompt prefix should expose top entries.");
+    Assert(FallbackPrefix.TryExtract("j   debug improve", "j", out string search) && search == "debug improve", "Prompt prefix should tolerate repeated whitespace.");
+    Assert(FallbackPrefix.TryExtract("  js\tenv", "js", out string systemSearch) && systemSearch == "env", "System prefix should tolerate leading whitespace and tabs.");
+    Assert(!FallbackPrefix.TryExtract("javascript", "j", out _), "Prefix token must not match a longer ordinary word.");
+    Assert(!FallbackPrefix.TryExtract("jargon", "j", out _), "Prefix token must require a boundary.");
 }
 
 static void TestRecentPromptCapAndDedupe()

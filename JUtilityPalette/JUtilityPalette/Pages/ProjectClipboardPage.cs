@@ -15,39 +15,41 @@ internal sealed partial class ProjectClipboardPage : ListPage
     public ProjectClipboardPage(LibraryStore store)
     {
         _store = store;
-        Title = "J Project Clipboard";
+        Title = "J Project Grid";
         Name = "Open";
         Icon = IconHelpers.FromRelativePath("Assets\\StoreLogo.png");
-        PlaceholderText = "Search project, category, repo, site, note...";
+        PlaceholderText = "Search projects...";
         ShowDetails = true;
+        GridProperties = new SmallGridLayout();
         _store.Changed += (_, _) => RaiseItemsChanged();
     }
 
     public override IListItem[] GetItems()
     {
-        List<IListItem> items =
-        [
-            new ListItem(new EditProjectPage(_store, null))
-            {
-                Title = "+ Add project row",
-                Subtitle = "Name + GitHub + site + optional third link",
-            },
-        ];
+        List<IListItem> items = [];
+        string query = SearchText?.Trim() ?? string.Empty;
+
+        foreach (ProjectLinkEntry project in _store.Projects.Where(x => Matches(x, query)))
+        {
+            items.Add(BuildProjectItem(project));
+        }
+
+        items.Add(new ListItem(new EditProjectPage(_store, null))
+        {
+            Title = "+ Project",
+            Subtitle = "Add repo + site pair",
+            Icon = new IconInfo("\uE710"),
+        });
 
         string all = LibraryStore.FormatAllProjectLines(_store.Projects);
         if (!string.IsNullOrWhiteSpace(all))
         {
             items.Add(new ListItem(new JCopyTextCommand(all, "Copy all project rows", "All included project rows copied"))
             {
-                Title = "Copy all included rows",
-                Subtitle = "One project per line; each row respects its copy switches",
+                Title = "Copy all",
+                Subtitle = "Included project rows",
+                Icon = new IconInfo("\uE8C8"),
             });
-        }
-
-        string query = SearchText?.Trim() ?? string.Empty;
-        foreach (ProjectLinkEntry project in _store.Projects.Where(x => Matches(x, query)))
-        {
-            items.Add(BuildProjectItem(project));
         }
 
         return [.. items];
@@ -99,23 +101,20 @@ internal sealed partial class ProjectClipboardPage : ListPage
         metadata.Add(new DetailsElement
         {
             Key = "Copy",
-            Data = new DetailsCommands
-            {
-                Commands = [.. copyCommands],
-            },
+            Data = new DetailsCommands { Commands = [.. copyCommands] },
         });
 
-        string included = BuildIncludedSummary(project);
         return new ListItem(primary)
         {
             Title = project.Name,
-            Subtitle = $"{project.Category} · copy: {included}",
-            Tags = [new Tag(project.IncludeInCopyAll ? "Copy all" : "Row only")],
+            Subtitle = project.Category,
+            Icon = new IconInfo("\uE8B7"),
+            Tags = [new Tag(project.IncludeInCopyAll ? "all" : "row")],
             Details = new Details
             {
                 Title = project.Name,
                 Body = string.IsNullOrWhiteSpace(project.Note)
-                    ? "Click a link to open it. Use the Copy commands for clipboard actions."
+                    ? "Open links here; copy actions never replace link clicks."
                     : project.Note,
                 Size = ContentSize.Medium,
                 Metadata = [.. metadata],
@@ -132,53 +131,13 @@ internal sealed partial class ProjectClipboardPage : ListPage
     private static DetailsElement LinkElement(string key, string url, string text) => new()
     {
         Key = key,
-        Data = new DetailsLink
-        {
-            Text = text,
-            Link = new Uri(url),
-        },
+        Data = new DetailsLink { Text = text, Link = new Uri(url) },
     };
 
-    private static string PreferredUrl(ProjectLinkEntry project)
-    {
-        if (!string.IsNullOrWhiteSpace(project.SiteUrl))
-        {
-            return project.SiteUrl;
-        }
-
-        if (!string.IsNullOrWhiteSpace(project.RepoUrl))
-        {
-            return project.RepoUrl;
-        }
-
-        return project.ExtraUrl;
-    }
-
-    private static string BuildIncludedSummary(ProjectLinkEntry project)
-    {
-        List<string> fields = [];
-        if (project.CopyName)
-        {
-            fields.Add("name");
-        }
-
-        if (project.CopyRepo && !string.IsNullOrWhiteSpace(project.RepoUrl))
-        {
-            fields.Add("repo");
-        }
-
-        if (project.CopySite && !string.IsNullOrWhiteSpace(project.SiteUrl))
-        {
-            fields.Add("site");
-        }
-
-        if (project.CopyExtra && !string.IsNullOrWhiteSpace(project.ExtraUrl))
-        {
-            fields.Add(project.ExtraLabel);
-        }
-
-        return fields.Count == 0 ? "nothing" : string.Join(" + ", fields);
-    }
+    private static string PreferredUrl(ProjectLinkEntry project) =>
+        !string.IsNullOrWhiteSpace(project.SiteUrl) ? project.SiteUrl
+        : !string.IsNullOrWhiteSpace(project.RepoUrl) ? project.RepoUrl
+        : project.ExtraUrl;
 
     private static bool Matches(ProjectLinkEntry project, string query)
     {

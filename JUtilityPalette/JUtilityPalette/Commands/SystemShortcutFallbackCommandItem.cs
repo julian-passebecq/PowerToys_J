@@ -40,6 +40,7 @@ internal sealed partial class SystemShortcutFallbackCommandItem : FallbackComman
 
     private void Hide()
     {
+        Command = null;
         Title = string.Empty;
         Subtitle = string.Empty;
     }

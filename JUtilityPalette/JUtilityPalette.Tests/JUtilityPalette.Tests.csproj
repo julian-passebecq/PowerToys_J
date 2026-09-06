@@ -15,5 +15,6 @@
     <Compile Include="..\JUtilityPalette\Utilities\PromptMatcher.cs" Link="Source\PromptMatcher.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\PowerToysBridge.cs" Link="Source\PowerToysBridge.cs" />
     <Compile Include="..\JUtilityPalette\Utilities\SystemShortcutCatalog.cs" Link="Source\SystemShortcutCatalog.cs" />
+    <Compile Include="..\JUtilityPalette\Utilities\AppLauncher.cs" Link="Source\AppLauncher.cs" />
   </ItemGroup>
 </Project>

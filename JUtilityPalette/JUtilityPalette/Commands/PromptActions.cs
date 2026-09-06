@@ -20,7 +20,11 @@ internal sealed partial class CopyPromptCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_prompt.Body);
+        if (!ClipboardText.TrySet(_prompt.Body))
+        {
+            return CommandResult.ShowToast("Could not copy the prompt");
+        }
+
         _store.AddRecentPrompt(_prompt.Title, _prompt.Body, _prompt.Id);
         return CommandResult.ShowToast("Prompt copied");
     }
@@ -42,7 +46,11 @@ internal sealed partial class CopyPromptAndOpenCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_prompt.Body);
+        if (!ClipboardText.TrySet(_prompt.Body))
+        {
+            return CommandResult.ShowToast("Could not copy the prompt");
+        }
+
         _store.AddRecentPrompt(_prompt.Title, _prompt.Body, _prompt.Id);
         return AppLauncher.TryOpen(_url)
             ? CommandResult.Dismiss()
@@ -64,7 +72,11 @@ internal sealed partial class CopyTextAndOpenCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_text);
+        if (!ClipboardText.TrySet(_text))
+        {
+            return CommandResult.ShowToast("Could not copy to the clipboard");
+        }
+
         return AppLauncher.TryOpen(_url)
             ? CommandResult.Dismiss()
             : CommandResult.ShowToast("Copied, but the destination could not be opened");
@@ -85,7 +97,11 @@ internal sealed partial class OpenPromptInCodexCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_prompt.Body);
+        if (!ClipboardText.TrySet(_prompt.Body))
+        {
+            return CommandResult.ShowToast("Could not copy the prompt");
+        }
+
         _store.AddRecentPrompt(_prompt.Title, _prompt.Body, _prompt.Id);
         return AppLauncher.TryOpenCodex(_prompt.Body)
             ? CommandResult.Dismiss()
@@ -105,7 +121,11 @@ internal sealed partial class OpenTextInCodexCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_text);
+        if (!ClipboardText.TrySet(_text))
+        {
+            return CommandResult.ShowToast("Could not copy the prompt");
+        }
+
         return AppLauncher.TryOpenCodex(_text)
             ? CommandResult.Dismiss()
             : CommandResult.ShowToast("Prompt copied, but Codex could not be opened");

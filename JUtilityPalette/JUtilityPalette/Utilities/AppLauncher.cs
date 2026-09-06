@@ -10,15 +10,16 @@ internal static class AppLauncher
 
     public static bool TryOpenChatGpt() => TryOpen(ChatGptUrl);
 
-    public static bool TryOpenCodex(string? prompt = null)
+    public static bool TryOpenCodex(string? prompt = null) => TryOpen(BuildCodexTarget(prompt));
+
+    internal static string BuildCodexTarget(string? prompt)
     {
-        string target = CodexNewChatUri;
-        if (!string.IsNullOrWhiteSpace(prompt) && prompt.Length <= MaxCodexDeepLinkPromptChars)
+        if (string.IsNullOrWhiteSpace(prompt) || prompt.Length > MaxCodexDeepLinkPromptChars)
         {
-            target = $"codex://new?prompt={Uri.EscapeDataString(prompt)}";
+            return CodexNewChatUri;
         }
 
-        return TryOpen(target);
+        return $"{CodexNewChatUri}?prompt={Uri.EscapeDataString(prompt)}";
     }
 
     public static bool TryOpen(string target)

@@ -7,9 +7,11 @@ var tests = new (string Name, Action Body)[]
 {
     ("Template variables", TestTemplateVariables),
     ("Prompt ranking", TestPromptRanking),
+    ("Prompt top recall", TestPromptTopRecall),
     ("Recent prompt cap and dedupe", TestRecentPromptCapAndDedupe),
     ("Backup recovery", TestBackupRecovery),
     ("Legacy Codex link migration", TestLegacyCodexMigration),
+    ("Codex deep-link target", TestCodexDeepLinkTarget),
     ("Named event bridge", TestNamedEventBridge),
     ("System shortcut ranking", TestSystemShortcutRanking),
 };
@@ -64,6 +66,26 @@ static void TestPromptRanking()
 
     IReadOnlyList<PromptEntry> promptOnly = PromptMatcher.Rank(prompts, "debug", promptsOnly: true);
     Assert(promptOnly.Count == 1 && promptOnly[0].Kind == "Prompt", "ChatGPT/Codex recall must exclude instruction-only entries.");
+}
+
+static void TestPromptTopRecall()
+{
+    DateTimeOffset now = DateTimeOffset.UtcNow;
+    PromptEntry[] prompts =
+    [
+        new() { Title = "Newest", Kind = "Prompt", UpdatedUtc = now },
+        new() { Title = "Pinned instruction", Kind = "Instruction", IsPinned = true, UpdatedUtc = now.AddDays(-4) },
+        new() { Title = "Pinned prompt", Kind = "Prompt", IsPinned = true, UpdatedUtc = now.AddDays(-2) },
+        new() { Title = "Older", Kind = "Prompt", UpdatedUtc = now.AddDays(-3) },
+    ];
+
+    IReadOnlyList<PromptEntry> all = PromptMatcher.Top(prompts);
+    Assert(all[0].Title == "Pinned prompt" && all[1].Title == "Pinned instruction", "Pinned entries should lead prefix-only recall, ordered by recency.");
+    Assert(all[2].Title == "Newest", "Newest unpinned entry should follow pinned entries.");
+
+    IReadOnlyList<PromptEntry> promptOnly = PromptMatcher.Top(prompts, promptsOnly: true);
+    Assert(promptOnly.All(x => x.Kind == "Prompt"), "ChatGPT/Codex top recall must exclude instructions.");
+    Assert(promptOnly[0].Title == "Pinned prompt", "Pinned prompt should lead prompt-only top recall.");
 }
 
 static void TestRecentPromptCapAndDedupe()
@@ -132,6 +154,13 @@ static void TestLegacyCodexMigration()
     {
         DeleteDirectory(directory);
     }
+}
+
+static void TestCodexDeepLinkTarget()
+{
+    Assert(AppLauncher.BuildCodexTarget(null) == "codex://threads/new", "Empty Codex launch should use the canonical new-thread URI.");
+    Assert(AppLauncher.BuildCodexTarget("hello world") == "codex://threads/new?prompt=hello%20world", "Codex prompt should be escaped on the canonical new-thread URI.");
+    Assert(AppLauncher.BuildCodexTarget(new string('x', 6001)) == "codex://threads/new", "Oversized prompts should fall back to opening a plain new Codex thread.");
 }
 
 static void TestNamedEventBridge()

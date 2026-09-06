@@ -4,6 +4,16 @@ namespace JUtilityPalette.Utilities;
 
 internal static class PromptMatcher
 {
+    public static IReadOnlyList<PromptEntry> Top(IEnumerable<PromptEntry> prompts, bool promptsOnly = false)
+    {
+        return prompts
+            .Where(prompt => !promptsOnly || string.Equals(prompt.Kind, "Prompt", StringComparison.OrdinalIgnoreCase))
+            .OrderByDescending(prompt => prompt.IsPinned)
+            .ThenByDescending(prompt => prompt.UpdatedUtc)
+            .ThenBy(prompt => prompt.Title, StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+    }
+
     public static IReadOnlyList<PromptEntry> Rank(IEnumerable<PromptEntry> prompts, string query, bool promptsOnly = false)
     {
         string normalized = query.Trim();

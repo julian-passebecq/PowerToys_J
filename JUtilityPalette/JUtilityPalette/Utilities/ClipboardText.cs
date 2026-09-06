@@ -1,9 +1,24 @@
 using Windows.ApplicationModel.DataTransfer;
+using Microsoft.CommandPalette.Extensions.Toolkit;
 
 namespace JUtilityPalette.Utilities;
 
 internal static class ClipboardText
 {
+    public static bool TrySet(string text)
+    {
+        try
+        {
+            Set(text);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            ExtensionHost.LogMessage($"J Utility Palette clipboard write failed: {ex}");
+            return false;
+        }
+    }
+
     public static void Set(string text)
     {
         Exception? error = null;

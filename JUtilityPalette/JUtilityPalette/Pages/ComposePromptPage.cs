@@ -114,7 +114,11 @@ internal sealed partial class ComposePromptForm : FormContent
         }
 
         string finalPrompt = string.Join("\n\n", blocks.Where(x => !string.IsNullOrWhiteSpace(x)));
-        ClipboardText.Set(finalPrompt);
+        if (!ClipboardText.TrySet(finalPrompt))
+        {
+            return CommandResult.ShowToast("Could not copy the composed prompt");
+        }
+
         int filledVariableCount = values.Count(x => !string.IsNullOrWhiteSpace(x.Value));
         int variationCount = addOnCount + filledVariableCount;
         string historyTitle = variationCount == 0 ? _prompt.Title : $"{_prompt.Title} · +{variationCount}";

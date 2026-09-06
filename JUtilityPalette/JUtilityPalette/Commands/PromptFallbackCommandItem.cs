@@ -42,17 +42,12 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
         }
 
         string search = normalized[_prefix.Length..].Trim();
-        if (search.Length == 0)
-        {
-            Hide();
-            return;
-        }
+        bool promptsOnly = _action != PromptFallbackAction.Copy;
+        IReadOnlyList<PromptEntry> matches = search.Length == 0
+            ? PromptMatcher.Top(_store.Prompts, promptsOnly)
+            : PromptMatcher.Rank(_store.Prompts, search, promptsOnly);
 
-        PromptEntry? match = PromptMatcher
-            .Rank(_store.Prompts, search, _action != PromptFallbackAction.Copy)
-            .Skip(_rank)
-            .FirstOrDefault();
-
+        PromptEntry? match = matches.Skip(_rank).FirstOrDefault();
         if (match is null)
         {
             Hide();
@@ -84,6 +79,7 @@ internal sealed partial class PromptFallbackCommandItem : FallbackCommandItem
 
     private void Hide()
     {
+        Command = null;
         Title = string.Empty;
         Subtitle = string.Empty;
     }

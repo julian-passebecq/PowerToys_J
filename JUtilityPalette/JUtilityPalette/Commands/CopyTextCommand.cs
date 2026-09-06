@@ -18,7 +18,8 @@ internal sealed partial class CopyTextCommand : InvokableCommand
 
     public override CommandResult Invoke()
     {
-        ClipboardText.Set(_text);
-        return CommandResult.ShowToast(_toast);
+        return ClipboardText.TrySet(_text)
+            ? CommandResult.ShowToast(_toast)
+            : CommandResult.ShowToast("Could not copy to the clipboard");
     }
 }

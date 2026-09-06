@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - feature/j-utility-palette-minimal
+      - feature/j-project-clipboard-minimal
+      - experiment/j-project-clipboard-full
+      - experiment/j-project-clipboard-grid
+      - experiment/j-project-clipboard-dashboard
     paths:
       - "JUtilityPalette/**"
       - ".github/workflows/jutilitypalette-ci.yml"
